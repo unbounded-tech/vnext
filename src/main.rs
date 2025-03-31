@@ -231,3 +231,88 @@ fn calculate_next_version(current: &Version, bump: &VersionBump) -> Version {
 
     next
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use regex::Regex;
+    use semver::Version;
+
+    #[test]
+    fn test_parse_version() {
+        assert_eq!(parse_version("v1.2.3").unwrap(), Version::new(1, 2, 3));
+        assert_eq!(parse_version("1.2.3").unwrap(), Version::new(1, 2, 3));
+        assert!(parse_version("invalid").is_err());
+    }
+
+    #[test]
+    fn test_calculate_next_version() {
+        let base = Version::new(1, 2, 3);
+
+        // No bump
+        let bump = VersionBump { major: false, minor: false, patch: false };
+        assert_eq!(calculate_next_version(&base, &bump), Version::new(1, 2, 3));
+
+        // Patch bump
+        let bump = VersionBump { major: false, minor: false, patch: true };
+        assert_eq!(calculate_next_version(&base, &bump), Version::new(1, 2, 4));
+
+        // Minor bump
+        let bump = VersionBump { major: false, minor: true, patch: false };
+        assert_eq!(calculate_next_version(&base, &bump), Version::new(1, 3, 0));
+
+        // Major bump
+        let bump = VersionBump { major: true, minor: false, patch: false };
+        assert_eq!(calculate_next_version(&base, &bump), Version::new(2, 0, 0));
+    }
+
+    #[test]
+    fn test_calculate_version_bump() {
+        // Create a temporary directory for the test repository
+        let temp_dir = tempfile::tempdir().unwrap();
+        let repo_path = temp_dir.path().join("test_repo");
+
+        // Initialize a bare repository
+        let repo = Repository::init_bare(&repo_path).unwrap();
+        let sig = git2::Signature::now("Test", "test@example.com").unwrap();
+        let mut index = repo.index().unwrap();
+        let tree_id = index.write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+
+        // Create a base commit
+        let base_commit_id = repo.commit(
+            Some("HEAD"),
+            &sig,
+            &sig,
+            "Initial commit",
+            &tree,
+            &[],
+        ).unwrap();
+        let base_commit = repo.find_commit(base_commit_id).unwrap();
+
+        // Create a commit with a breaking change
+        let to_commit_id = repo.commit(
+            Some("HEAD"),
+            &sig,
+            &sig,
+            "feat: add new feature\nBREAKING CHANGE: something big",
+            &tree,
+            &[&base_commit],
+        ).unwrap();
+        let to_commit = repo.find_commit(to_commit_id).unwrap();
+
+        let major_re = Regex::new("BREAKING CHANGE").unwrap();
+        let minor_re = Regex::new("^feat:.*").unwrap();
+        let noop_re = Regex::new("^chore:.*").unwrap();
+
+        let (bump, summary) = calculate_version_bump(&repo, &base_commit, &to_commit, &major_re, &minor_re, &noop_re);
+
+        assert!(bump.major);
+        assert_eq!(summary.major, 1);
+        assert_eq!(summary.minor, 0);
+        assert_eq!(summary.patch, 0);
+        assert_eq!(summary.noop, 0);
+
+        // Temp directory is automatically cleaned up when `temp_dir` is dropped
+    }
+}
