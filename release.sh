@@ -1,11 +1,12 @@
-VERSION=v`vnext`
+VERSION=`vnext`
+V_VERSION=v$VERSION
 mkdir .tmp
 cd .tmp
 git clone git@github.com:harmony-labs/vnext.git
 cd vnext
 set-cargo-version Cargo.toml $VERSION
 git add -A
-git commit -m "chore(version): $VERSION"
+git commit -m "chore(version): $V_VERSION"
 git tag $VERSION
 git push --tags
 cd ../../
