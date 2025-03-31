@@ -30,6 +30,10 @@ jobs:
             runs-on: ubuntu-24.04
             target: arm-unknown-linux-musleabi
 
+          - os-name: Linux-i686
+            runs-on: ubuntu-24.04
+            target: i686-unknown-linux-musl
+
     steps:
 
     - name: Checkout
