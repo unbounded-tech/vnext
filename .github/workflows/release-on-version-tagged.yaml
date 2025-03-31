@@ -1,0 +1,44 @@
+name: Build and Publish Rust Binary
+on:
+  push:
+    tags:
+    - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: ${{ matrix.platform.runs-on }}
+    strategy:
+      matrix:
+        platform:
+          - os-name: FreeBSD-x86_64
+            runs-on: ubuntu-24.04
+            target: x86_64-unknown-freebsd
+
+          - os-name: macOS-x86_64
+            runs-on: macOS-latest
+            target: x86_64-apple-darwin
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Build binary
+      uses: houseabsolute/actions-rust-cross@v1
+      with:
+        command: build
+        target: ${{ matrix.platform.target }}
+        args: "--release"
+        strip: true
+
+    - name: Publish artifacts and release
+      uses: houseabsolute/actions-rust-release@v0
+      with:
+        executable-name: xdp-cli
+        target: ${{ matrix.platform.target }}
+        changes-file: ""
+    
