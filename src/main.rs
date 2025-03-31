@@ -41,13 +41,13 @@ struct CommitSummary {
 
 fn main() {
     logging::init_logging().expect("Failed to initialize logging");
-    log::info!("Starting vnext...");
+    log::debug!("Starting vnext...");
 
     let cli = Cli::parse();
 
-    log::info!("Major bump regex: {}", cli.major);
-    log::info!("Minor bump regex: {}", cli.minor);
-    log::info!("No-op regex: {}", cli.noop);
+    log::debug!("Major bump regex: {}", cli.major);
+    log::debug!("Minor bump regex: {}", cli.minor);
+    log::debug!("No-op regex: {}", cli.noop);
 
     let major_re = Regex::new(&cli.major).unwrap_or_else(|e| {
         log::error!("Invalid major regex '{}': {}", cli.major, e);
@@ -100,11 +100,11 @@ fn main() {
     let (start_version, last_tag_commit) = match find_latest_tag(&repo) {
         Some((tag, commit)) => {
             let version = parse_version(&tag).unwrap_or_else(|_| Version::new(0, 0, 0));
-            log::info!("Last release: {} at commit {}", tag, commit.id());
+            log::debug!("Last release: {} at commit {}", tag, commit.id());
             (version, commit)
         }
         None => {
-            log::info!("No previous release tags found, starting from 0.0.0");
+            log::debug!("No previous release tags found, starting from 0.0.0");
             let version = Version::new(0, 0, 0);
             let parents = head.parents();
             let base_commit = if parents.count() > 0 {
@@ -138,17 +138,17 @@ fn main() {
 
     let (bump, summary) = calculate_version_bump(&repo, &base_commit, &head, &major_re, &minor_re, &noop_re);
 
-    log::info!(
+    log::debug!(
         "Commits pending release: {} major, {} minor, {} patch, {} noop",
         summary.major, summary.minor, summary.patch, summary.noop
     );
 
     let next_version = calculate_next_version(&start_version, &bump);
-    log::info!(
+    log::debug!(
         "Version bump: major={}, minor={}, patch={}",
         bump.major, bump.minor, bump.patch
     );
-    log::info!("Next version: {}", next_version);
+    log::debug!("Next version: {}", next_version);
 
     println!("{}", next_version);
 }
