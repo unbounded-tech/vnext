@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug `vnext`",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/target/debug/vnext",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "sourceLanguages": [
+                "rust"
+            ]
+        }
+    ]
+}
