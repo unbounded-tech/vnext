@@ -1,6 +1,7 @@
 use clap::Parser;
 use git2::{Repository, Commit};
 use semver::{Version, Prerelease, BuildMetadata};
+use regex::Regex;
 
 mod logging;
 
@@ -11,13 +12,21 @@ struct Cli {
     #[clap(long, action)]
     dry_run: bool,
 
-    /// Output additional details about the version calculation
-    #[clap(long, action)]
-    verbose: bool,
-
     /// Specify a starting version instead of detecting from Git tags (e.g., "1.2.3" or "v1.2.3")
     #[clap(long)]
     start_version: Option<String>,
+
+    /// Regex for commits triggering a major version bump (default: "BREAKING CHANGE")
+    #[clap(long, default_value = "BREAKING CHANGE")]
+    major: String,
+
+    /// Regex for commits triggering a minor version bump (default: "^feat:.*")
+    #[clap(long, default_value = "^feat:.*")]
+    minor: String,
+
+    /// Regex for commits that should not trigger a version bump (default: "^chore:.*")
+    #[clap(long, default_value = "^chore:.*")]
+    noop: String,
 }
 
 struct VersionBump {
@@ -26,13 +35,36 @@ struct VersionBump {
     patch: bool,
 }
 
+struct CommitSummary {
+    major: u32,
+    minor: u32,
+    patch: u32,
+    noop: u32,
+}
+
 fn main() {
     logging::init_logging().expect("Failed to initialize logging");
     log::info!("Starting vnext...");
 
     let cli = Cli::parse();
 
-    // Open the Git repository in the current directory, handle error gracefully
+    log::info!("Major bump regex: {}", cli.major);
+    log::info!("Minor bump regex: {}", cli.minor);
+    log::info!("No-op regex: {}", cli.noop);
+
+    let major_re = Regex::new(&cli.major).unwrap_or_else(|e| {
+        log::error!("Invalid major regex '{}': {}", cli.major, e);
+        std::process::exit(1);
+    });
+    let minor_re = Regex::new(&cli.minor).unwrap_or_else(|e| {
+        log::error!("Invalid minor regex '{}': {}", cli.minor, e);
+        std::process::exit(1);
+    });
+    let noop_re = Regex::new(&cli.noop).unwrap_or_else(|e| {
+        log::error!("Invalid noop regex '{}': {}", cli.noop, e);
+        std::process::exit(1);
+    });
+
     let repo = match Repository::open(".") {
         Ok(repo) => repo,
         Err(e) => {
@@ -41,7 +73,6 @@ fn main() {
         }
     };
 
-    // Get HEAD, handle case where it doesn’t exist (e.g., no commits)
     let head = match repo.head() {
         Ok(head_ref) => match head_ref.peel_to_commit() {
             Ok(commit) => commit,
@@ -55,51 +86,68 @@ fn main() {
             std::process::exit(1);
         }
     };
+    log::debug!("HEAD commit: {}", head.id());
 
-    // Determine the main branch (main or master)
     let main_branch = find_main_branch(&repo).expect("Failed to find main branch");
     log::debug!("Main branch detected: {}", main_branch);
 
-    // Determine the starting version: either from CLI arg or latest tag
     let (start_version, last_tag_commit) = match &cli.start_version {
         Some(version_str) => {
             let version = parse_version(version_str).expect("Invalid start-version provided");
-            if cli.verbose {
-                log::info!("Using provided start version: {}", version);
-            }
-            (version, head.clone()) // Use HEAD as the commit if version is manual
+            log::info!("Using provided start version: {}", version);
+            (version, head.clone())
         }
         None => {
-            let (tag, commit) = find_latest_tag(&repo).unwrap_or_else(|| {
-                log::info!("No previous release tags found, starting from 0.0.0");
-                ("v0.0.0".to_string(), head.clone())
-            });
-            let version = parse_version(&tag).unwrap_or_else(|_| Version::new(0, 0, 0));
-            if cli.verbose {
-                log::info!("Last release: {} at commit {}", tag, commit.id());
+            match find_latest_tag(&repo) {
+                Some((tag, commit)) => {
+                    let version = parse_version(&tag).unwrap_or_else(|_| Version::new(0, 0, 0));
+                    log::info!("Last release: {} at commit {}", tag, commit.id());
+                    (version, commit)
+                }
+                None => {
+                    log::info!("No previous release tags found, starting from 0.0.0");
+                    let version = Version::new(0, 0, 0);
+                    // If no tags, use HEAD’s parent if it exists, otherwise HEAD itself
+                    let base_commit = head.parents().next().map(|c| c.clone()).unwrap_or_else(|| head.clone());
+                    (version, base_commit)
+                }
             }
-            (version, commit)
+        }
+    };
+    log::debug!("Last tag or base commit: {}", last_tag_commit.id());
+
+    let merge_base = if last_tag_commit.id() == head.id() && head.parents().count() == 0 {
+        // Single commit repo with no tags, analyze HEAD directly
+        log::debug!("Single commit repo with no tags, analyzing all commits");
+        None
+    } else {
+        let base = repo.merge_base(last_tag_commit.id(), head.id())
+            .expect("Failed to find merge base");
+        log::debug!("Merge base: {}", base);
+        Some(base)
+    };
+
+    let (bump, summary) = match merge_base {
+        Some(base) => {
+            let merge_base_commit = repo.find_commit(base).expect("Failed to find merge base commit");
+            calculate_version_bump(&repo, &merge_base_commit, &head, &major_re, &minor_re, &noop_re)
+        }
+        None => {
+            // No prior base (no tags, single commit), analyze from HEAD’s parent or HEAD
+            let empty_base = head.parents().next().map(|c| c.clone()).unwrap_or_else(|| head.clone());
+            calculate_version_bump(&repo, &empty_base, &head, &major_re, &minor_re, &noop_re)
         }
     };
 
-    // Find the merge base between the last tag (or HEAD if manual) and HEAD to account for release commits
-    let merge_base = repo.merge_base(last_tag_commit.id(), head.id())
-        .expect("Failed to find merge base");
-    let merge_base_commit = repo.find_commit(merge_base).expect("Failed to find merge base commit");
+    log::info!(
+        "Commits pending release: {} major, {} minor, {} patch, {} noop",
+        summary.major, summary.minor, summary.patch, summary.noop
+    );
 
-    // Analyze commits from merge base to HEAD
-    let bump = calculate_version_bump(&repo, &merge_base_commit, &head);
-    
-    // Calculate the next version
     let next_version = calculate_next_version(&start_version, &bump);
-    if cli.verbose {
-        log::info!("Version bump: major={}, minor={}, patch={}", bump.major, bump.minor, bump.patch);
-        log::info!("Next version: {}", next_version);
-    } else {
-        log::info!("Next version: {}", next_version);
-    }
+    log::info!("Version bump: major={}, minor={}, patch={}", bump.major, bump.minor, bump.patch);
+    log::info!("Next version: {}", next_version);
 
-    // Output the version unless dry-run is enabled
     if !cli.dry_run {
         println!("{}", next_version);
     }
@@ -135,39 +183,50 @@ fn find_latest_tag(repo: &Repository) -> Option<(String, Commit)> {
 }
 
 fn parse_version(tag: &str) -> Result<Version, semver::Error> {
-    let cleaned_tag = tag.trim_start_matches('v'); // Remove 'v' prefix if present
+    let cleaned_tag = tag.trim_start_matches('v');
     Version::parse(cleaned_tag)
 }
 
-fn calculate_version_bump(repo: &Repository, from: &Commit, to: &Commit) -> VersionBump {
+fn calculate_version_bump(repo: &Repository, from: &Commit, to: &Commit, major_re: &Regex, minor_re: &Regex, noop_re: &Regex) -> (VersionBump, CommitSummary) {
     let mut revwalk = repo.revwalk().expect("Failed to create revwalk");
     revwalk.push(to.id()).expect("Failed to push HEAD to revwalk");
-    revwalk.hide(from.id()).expect("Failed to hide merge base");
+    if from.id() != to.id() { // Only hide if from and to are different
+        revwalk.hide(from.id()).expect("Failed to hide merge base");
+    }
+    log::debug!("Revwalk range: {}..{}", from.id(), to.id());
 
     let mut bump = VersionBump { major: false, minor: false, patch: false };
+    let mut summary = CommitSummary { major: 0, minor: 0, patch: 0, noop: 0 };
 
+    let mut commit_count = 0;
     for commit_id in revwalk {
+        commit_count += 1;
         let commit = repo.find_commit(commit_id.expect("Invalid commit ID")).expect("Failed to find commit");
         let message = commit.message().unwrap_or("");
+        log::debug!("Pending commit: {} - {}", commit.id(), message.lines().next().unwrap_or(""));
 
-        log::debug!("Analyzing commit: {} - {}", commit.id(), message.lines().next().unwrap_or(""));
-
-        if message.contains("BREAKING CHANGE") {
+        if major_re.is_match(message) {
             bump.major = true;
-        } else if message.starts_with("feat:") {
+            summary.major += 1;
+        } else if minor_re.is_match(message) {
             bump.minor = true;
-        } else if message.starts_with("fix:") {
+            summary.minor += 1;
+        } else if !noop_re.is_match(message) {
             bump.patch = true;
+            summary.patch += 1;
+        } else {
+            summary.noop += 1;
         }
     }
+    log::debug!("Total commits analyzed: {}", commit_count);
 
-    bump
+    (bump, summary)
 }
 
 fn calculate_next_version(current: &Version, bump: &VersionBump) -> Version {
     let mut next = current.clone();
-    next.pre = Prerelease::EMPTY; // Clear prerelease
-    next.build = BuildMetadata::EMPTY; // Clear build metadata
+    next.pre = Prerelease::EMPTY;
+    next.build = BuildMetadata::EMPTY;
 
     if bump.major {
         next.major += 1;
