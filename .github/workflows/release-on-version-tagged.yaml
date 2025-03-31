@@ -38,7 +38,7 @@ jobs:
     - name: Publish artifacts and release
       uses: houseabsolute/actions-rust-release@v0
       with:
-        executable-name: xdp-cli
+        executable-name: vnext
         target: ${{ matrix.platform.target }}
         changes-file: ""
     
