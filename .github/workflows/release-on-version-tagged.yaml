@@ -60,7 +60,7 @@ jobs:
       with:
         command: build
         target: ${{ matrix.platform.target }}
-        args: "--release"
+        args: "--locked --release"
         strip: true
 
     - name: Publish artifacts and release
