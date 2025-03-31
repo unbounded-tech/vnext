@@ -1,16 +1,3 @@
 {
-  "extends": ["config:recommended", ":dependencyDashboard"],
-  "customManagers": [
-    {
-      "customType": "regex",
-      "fileMatch": [
-        ".*\\.yaml$"
-      ],
-      "matchStrings": [
-        "\\s*metadata:\\s*name:\\s*(?<depName>.*?)\\s*spec:\\s*package:\\s*ghcr.io\/(?<packageName>.*?):(?<currentValue>.*?)\\s"
-      ],
-      "datasourceTemplate": "github-releases",
-      "registryUrlTemplate": "https://github.com"
-    }
-  ]
+  "extends": ["config:recommended", ":dependencyDashboard"]
 }
