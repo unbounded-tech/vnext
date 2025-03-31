@@ -8,10 +8,6 @@ mod logging;
 #[derive(Parser)]
 #[clap(author, version, about = "Calculate the next version based on conventional commits")]
 struct Cli {
-    /// Perform a dry run without outputting the version (for testing)
-    #[clap(long, action)]
-    dry_run: bool,
-
     /// Specify a starting version instead of detecting from Git tags (e.g., "1.2.3" or "v1.2.3")
     #[clap(long)]
     start_version: Option<String>,
@@ -107,8 +103,17 @@ fn main() {
                 None => {
                     log::info!("No previous release tags found, starting from 0.0.0");
                     let version = Version::new(0, 0, 0);
-                    // If no tags, use HEAD’s parent if it exists, otherwise HEAD itself
-                    let base_commit = head.parents().next().map(|c| c.clone()).unwrap_or_else(|| head.clone());
+                    // Find the earliest commit in the history
+                    let parents = head.parents();
+                    let base_commit = if parents.count() > 0 {
+                        let mut earliest = head.clone();
+                        for parent in head.parents() {
+                            earliest = parent.clone(); // Traverse to the root
+                        }
+                        earliest
+                    } else {
+                        head.clone()
+                    };
                     (version, base_commit)
                 }
             }
@@ -117,7 +122,6 @@ fn main() {
     log::debug!("Last tag or base commit: {}", last_tag_commit.id());
 
     let merge_base = if last_tag_commit.id() == head.id() && head.parents().count() == 0 {
-        // Single commit repo with no tags, analyze HEAD directly
         log::debug!("Single commit repo with no tags, analyzing all commits");
         None
     } else {
@@ -129,11 +133,10 @@ fn main() {
 
     let (bump, summary) = match merge_base {
         Some(base) => {
-            let merge_base_commit = repo.find_commit(base).expect("Failed to find merge base commit");
+            let merge_base_commit = repo.find_commit(base).expect("Found merge base commit");
             calculate_version_bump(&repo, &merge_base_commit, &head, &major_re, &minor_re, &noop_re)
         }
         None => {
-            // No prior base (no tags, single commit), analyze from HEAD’s parent or HEAD
             let empty_base = head.parents().next().map(|c| c.clone()).unwrap_or_else(|| head.clone());
             calculate_version_bump(&repo, &empty_base, &head, &major_re, &minor_re, &noop_re)
         }
@@ -148,9 +151,7 @@ fn main() {
     log::info!("Version bump: major={}, minor={}, patch={}", bump.major, bump.minor, bump.patch);
     log::info!("Next version: {}", next_version);
 
-    if !cli.dry_run {
-        println!("{}", next_version);
-    }
+    println!("{}", next_version);
 }
 
 fn find_main_branch(repo: &Repository) -> Option<String> {
@@ -187,23 +188,27 @@ fn parse_version(tag: &str) -> Result<Version, semver::Error> {
     Version::parse(cleaned_tag)
 }
 
-fn calculate_version_bump(repo: &Repository, from: &Commit, to: &Commit, major_re: &Regex, minor_re: &Regex, noop_re: &Regex) -> (VersionBump, CommitSummary) {
-    let mut revwalk = repo.revwalk().expect("Failed to create revwalk");
-    revwalk.push(to.id()).expect("Failed to push HEAD to revwalk");
-    if from.id() != to.id() { // Only hide if from and to are different
-        revwalk.hide(from.id()).expect("Failed to hide merge base");
-    }
-    log::debug!("Revwalk range: {}..{}", from.id(), to.id());
-
+fn calculate_version_bump(_repo: &Repository, from: &Commit, to: &Commit, major_re: &Regex, minor_re: &Regex, noop_re: &Regex) -> (VersionBump, CommitSummary) {
     let mut bump = VersionBump { major: false, minor: false, patch: false };
     let mut summary = CommitSummary { major: 0, minor: 0, patch: 0, noop: 0 };
-
     let mut commit_count = 0;
-    for commit_id in revwalk {
+
+    let mut current = to.clone();
+    let base_id = from.id();
+    let mut seen = std::collections::HashSet::new();
+
+    log::debug!("Walking commits from {} to base {}", to.id(), base_id);
+
+    // Walk from HEAD until we pass the base commit
+    loop {
+        if seen.contains(&current.id()) {
+            break; // Avoid infinite loops
+        }
+        seen.insert(current.id());
         commit_count += 1;
-        let commit = repo.find_commit(commit_id.expect("Invalid commit ID")).expect("Failed to find commit");
-        let message = commit.message().unwrap_or("");
-        log::debug!("Pending commit: {} - {}", commit.id(), message.lines().next().unwrap_or(""));
+
+        let message = current.message().unwrap_or("");
+        log::debug!("Pending commit: {} - {}", current.id(), message.lines().next().unwrap_or(""));
 
         if major_re.is_match(message) {
             bump.major = true;
@@ -217,9 +222,18 @@ fn calculate_version_bump(repo: &Repository, from: &Commit, to: &Commit, major_r
         } else {
             summary.noop += 1;
         }
-    }
-    log::debug!("Total commits analyzed: {}", commit_count);
 
+        // Stop after processing the base commit
+        if current.id() == base_id {
+            break;
+        }
+        if current.parents().count() == 0 {
+            break; // Reached the root
+        }
+        current = current.parents().next().unwrap().clone();
+    }
+
+    log::debug!("Total commits analyzed: {}", commit_count);
     (bump, summary)
 }
 
