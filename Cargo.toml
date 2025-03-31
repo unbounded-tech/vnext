@@ -1,6 +1,6 @@
 [package]
 name = "vnext"
-version = "0.0.0-dev"
+version = "v0.4.1"
 edition = "2021"
 
 [dependencies]
