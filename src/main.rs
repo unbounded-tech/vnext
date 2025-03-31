@@ -103,7 +103,6 @@ fn main() {
                 None => {
                     log::info!("No previous release tags found, starting from 0.0.0");
                     let version = Version::new(0, 0, 0);
-                    // Find the earliest commit in the history
                     let parents = head.parents();
                     let base_commit = if parents.count() > 0 {
                         let mut earliest = head.clone();
@@ -121,26 +120,20 @@ fn main() {
     };
     log::debug!("Last tag or base commit: {}", last_tag_commit.id());
 
-    let merge_base = if last_tag_commit.id() == head.id() && head.parents().count() == 0 {
+    // Determine the base commit: use merge base with main if tag exists, otherwise earliest commit
+    let base_commit = if last_tag_commit.id() == head.id() && head.parents().count() == 0 {
         log::debug!("Single commit repo with no tags, analyzing all commits");
-        None
+        head.parents().next().map(|c| c.clone()).unwrap_or_else(|| head.clone())
+    } else if cli.start_version.is_none() && find_latest_tag(&repo).is_some() {
+        let merge_base = repo.merge_base(head.id(), last_tag_commit.id())
+            .expect("Failed to find merge base between HEAD and tag");
+        repo.find_commit(merge_base).expect("Failed to find merge base commit")
     } else {
-        let base = repo.merge_base(last_tag_commit.id(), head.id())
-            .expect("Failed to find merge base");
-        log::debug!("Merge base: {}", base);
-        Some(base)
+        last_tag_commit.clone()
     };
+    log::debug!("Base commit for analysis: {}", base_commit.id());
 
-    let (bump, summary) = match merge_base {
-        Some(base) => {
-            let merge_base_commit = repo.find_commit(base).expect("Found merge base commit");
-            calculate_version_bump(&repo, &merge_base_commit, &head, &major_re, &minor_re, &noop_re)
-        }
-        None => {
-            let empty_base = head.parents().next().map(|c| c.clone()).unwrap_or_else(|| head.clone());
-            calculate_version_bump(&repo, &empty_base, &head, &major_re, &minor_re, &noop_re)
-        }
-    };
+    let (bump, summary) = calculate_version_bump(&repo, &base_commit, &head, &major_re, &minor_re, &noop_re);
 
     log::info!(
         "Commits pending release: {} major, {} minor, {} patch, {} noop",
@@ -199,8 +192,8 @@ fn calculate_version_bump(_repo: &Repository, from: &Commit, to: &Commit, major_
 
     log::debug!("Walking commits from {} to base {}", to.id(), base_id);
 
-    // Walk from HEAD until we pass the base commit
-    loop {
+    // Walk from HEAD until we reach the base commit, excluding the base itself
+    while current.id() != base_id {
         if seen.contains(&current.id()) {
             break; // Avoid infinite loops
         }
@@ -223,10 +216,6 @@ fn calculate_version_bump(_repo: &Repository, from: &Commit, to: &Commit, major_
             summary.noop += 1;
         }
 
-        // Stop after processing the base commit
-        if current.id() == base_id {
-            break;
-        }
         if current.parents().count() == 0 {
             break; // Reached the root
         }
