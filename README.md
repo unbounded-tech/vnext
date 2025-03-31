@@ -8,13 +8,12 @@ Install [ubi](https://github.com/houseabsolute/ubi) and create `~/.ubi/bin` and 
 
 ```
 mkdir -p ~/.ubi/bin
-echo 'export PATH="$HOME/.ubi/bin:$PATH"' >> ~/.zshrc
+echo '\nexport PATH="$HOME/.ubi/bin:$PATH"' >> ~/.zshrc
 ```
 
 Use `ubi` to install:
 
 ```
-export GITHUB_TOKEN=$(gh auth token)
 ubi --project harmony-labs/vnext --in ~/.ubi/bin
 ```
 
