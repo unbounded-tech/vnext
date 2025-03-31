@@ -7,7 +7,7 @@ cd vnext
 set-cargo-version Cargo.toml $VERSION
 git add -A
 git commit -m "chore(version): $V_VERSION"
-git tag $VERSION
+git tag $V_VERSION
 git push --tags
 cd ../../
 rm -rf .tmp/vnext
