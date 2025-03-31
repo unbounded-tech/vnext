@@ -1,3 +1,4 @@
+git fetch --all --tags -p && git rebase origin/main --autostash
 VERSION=`vnext`
 V_VERSION=v$VERSION
 mkdir .tmp
