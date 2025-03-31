@@ -1,4 +1,4 @@
-VERSION=`vnext`
+VERSION=v`vnext`
 mkdir .tmp
 cd .tmp
 git clone git@github.com:harmony-labs/vnext.git
