@@ -8,10 +8,6 @@ mod logging;
 #[derive(Parser)]
 #[clap(author, version, about = "Calculate the next version based on conventional commits")]
 struct Cli {
-    /// Specify a starting version instead of detecting from Git tags (e.g., "1.2.3" or "v1.2.3")
-    #[clap(long)]
-    start_version: Option<String>,
-
     /// Regex for commits triggering a major version bump (default: "BREAKING CHANGE")
     #[clap(long, default_value = "BREAKING CHANGE")]
     major: String,
@@ -87,35 +83,26 @@ fn main() {
     let main_branch = find_main_branch(&repo).expect("Failed to find main branch");
     log::debug!("Main branch detected: {}", main_branch);
 
-    let (start_version, last_tag_commit) = match &cli.start_version {
-        Some(version_str) => {
-            let version = parse_version(version_str).expect("Invalid start-version provided");
-            log::info!("Using provided start version: {}", version);
-            (version, head.clone())
+    let (start_version, last_tag_commit) = match find_latest_tag(&repo) {
+        Some((tag, commit)) => {
+            let version = parse_version(&tag).unwrap_or_else(|_| Version::new(0, 0, 0));
+            log::info!("Last release: {} at commit {}", tag, commit.id());
+            (version, commit)
         }
         None => {
-            match find_latest_tag(&repo) {
-                Some((tag, commit)) => {
-                    let version = parse_version(&tag).unwrap_or_else(|_| Version::new(0, 0, 0));
-                    log::info!("Last release: {} at commit {}", tag, commit.id());
-                    (version, commit)
+            log::info!("No previous release tags found, starting from 0.0.0");
+            let version = Version::new(0, 0, 0);
+            let parents = head.parents();
+            let base_commit = if parents.count() > 0 {
+                let mut earliest = head.clone();
+                for parent in head.parents() {
+                    earliest = parent.clone(); // Traverse to the root
                 }
-                None => {
-                    log::info!("No previous release tags found, starting from 0.0.0");
-                    let version = Version::new(0, 0, 0);
-                    let parents = head.parents();
-                    let base_commit = if parents.count() > 0 {
-                        let mut earliest = head.clone();
-                        for parent in head.parents() {
-                            earliest = parent.clone(); // Traverse to the root
-                        }
-                        earliest
-                    } else {
-                        head.clone()
-                    };
-                    (version, base_commit)
-                }
-            }
+                earliest
+            } else {
+                head.clone()
+            };
+            (version, base_commit)
         }
     };
     log::debug!("Last tag or base commit: {}", last_tag_commit.id());
@@ -124,7 +111,7 @@ fn main() {
     let base_commit = if last_tag_commit.id() == head.id() && head.parents().count() == 0 {
         log::debug!("Single commit repo with no tags, analyzing all commits");
         head.parents().next().map(|c| c.clone()).unwrap_or_else(|| head.clone())
-    } else if cli.start_version.is_none() && find_latest_tag(&repo).is_some() {
+    } else if find_latest_tag(&repo).is_some() {
         let merge_base = repo.merge_base(head.id(), last_tag_commit.id())
             .expect("Failed to find merge base between HEAD and tag");
         repo.find_commit(merge_base).expect("Failed to find merge base commit")
