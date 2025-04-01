@@ -45,11 +45,12 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git commit -am "chore: bump version to ${{ steps.version.outputs.version }}"
-          git tag ${{ steps.version.outputs.version }}
+          git commit -am "chore: bump version to v${{ steps.version.outputs.version }}"
+          git tag v${{ steps.version.outputs.version }}
       
       - name: Push tag and changes
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tags: true
+          branch: v${{ steps.version.outputs.version }}
