@@ -28,20 +28,16 @@ jobs:
           echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
 
       - name: Compute next version using action-vnext
-        id: compute-version
+        id: version
         uses: harmony-labs/action-vnext@v0.3.0
 
-      - name: Compare versions and exit if no change
-        if: steps.compute-version.outputs.version == steps.current-version.outputs.current_version
-        run: |
-          echo "No new version detected (computed version: ${{ steps.compute-version.outputs.version }})"
-          exit 0
-
       - name: (Optional) Update Cargo.toml version
+        if: steps.version.outputs.version != steps.current-version.outputs.current_version
         run: |
           # Update the version in Cargo.toml using set-cargo-version (if needed)
           # Remove the "v" prefix when updating Cargo.toml
-          new_version=${{ steps.compute-version.outputs.version }}
+          new_version=${{ steps.version.outputs.version }}
+          echo "new_version=$new_version"
           cargo install set-cargo-version || true
           set-cargo-version Cargo.toml $(echo $new_version | sed 's/^v//')
       
@@ -49,8 +45,8 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git commit -am "chore: bump version to ${{ steps.compute-version.outputs.version }}"
-          git tag ${{ steps.compute-version.outputs.version }}
+          git commit -am "chore: bump version to ${{ steps.version.outputs.version }}"
+          git tag ${{ steps.version.outputs.version }}
       
       - name: Push tag and changes
         uses: ad-m/github-push-action@master
