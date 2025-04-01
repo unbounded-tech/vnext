@@ -1,0 +1,59 @@
+name: Release vnext
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Get current version tag
+        id: current-version
+        run: |
+          CURRENT=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo "0.0.0")
+          echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+
+      - name: Compute next version using action-vnext
+        id: compute-version
+        uses: harmony-labs/action-vnext@v0.0.3
+
+      - name: Compare versions and exit if no change
+        if: steps.compute-version.outputs.version == steps.current-version.outputs.current_version
+        run: |
+          echo "No new version detected (computed version: ${{ steps.compute-version.outputs.version }})"
+          exit 0
+
+      - name: (Optional) Update Cargo.toml version
+        run: |
+          # Update the version in Cargo.toml using set-cargo-version (if needed)
+          # Remove the "v" prefix when updating Cargo.toml
+          new_version=${{ steps.compute-version.outputs.version }}
+          cargo install set-cargo-version || true
+          set-cargo-version Cargo.toml $(echo $new_version | sed 's/^v//')
+      
+      - name: Commit version bump changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -am "chore: bump version to ${{ steps.compute-version.outputs.version }}"
+          git tag ${{ steps.compute-version.outputs.version }}
+      
+      - name: Push tag and changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tags: true
