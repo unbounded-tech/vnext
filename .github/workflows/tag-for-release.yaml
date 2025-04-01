@@ -41,16 +41,11 @@ jobs:
           cargo install set-cargo-version || true
           set-cargo-version Cargo.toml $(echo $new_version | sed 's/^v//')
       
-      - name: Commit version bump changes
+      - name: Commit, tag, and push changes
+        if: steps.version.outputs.version != steps.current-version.outputs.current_version
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git commit -am "chore: bump version to v${{ steps.version.outputs.version }}"
           git tag v${{ steps.version.outputs.version }}
-      
-      - name: Push tag and changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tags: true
-          branch: v${{ steps.version.outputs.version }}
+          git push --tags
