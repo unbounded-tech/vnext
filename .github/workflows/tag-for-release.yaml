@@ -23,30 +23,30 @@ jobs:
         run: git fetch --tags
 
       - name: Get current version tag
-        id: current-version
+        id: current
         run: |
           CURRENT=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo "0.0.0")
           echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
 
       - name: Compute next version using action-vnext
-        id: version
+        id: next
         uses: harmony-labs/action-vnext@v0.4.0
 
       - name: (Optional) Update Cargo.toml version
-        if: steps.version.outputs.version != steps.current-version.outputs.current_version
+        if: steps.next.outputs.version != steps.current.outputs.current_version
         run: |
           # Update the version in Cargo.toml using set-cargo-version (if needed)
           # Remove the "v" prefix when updating Cargo.toml
-          new_version=${{ steps.version.outputs.version }}
+          new_version=${{ steps.next.outputs.version }}
           echo "new_version=$new_version"
           cargo install set-cargo-version || true
           set-cargo-version Cargo.toml $(echo $new_version | sed 's/^v//')
       
       - name: Commit, tag, and push changes
-        if: steps.version.outputs.version != steps.current-version.outputs.current_version
+        if: steps.next.outputs.version != steps.current.outputs.current_version
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git commit -am "chore: bump version to v${{ steps.version.outputs.version }}"
-          git tag v${{ steps.version.outputs.version }}
+          git commit -am "chore: bump version to v${{ steps.next.outputs.version }}"
+          git tag v${{ steps.next.outputs.version }}
           git push --tags
