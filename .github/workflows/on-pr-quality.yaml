@@ -1,0 +1,12 @@
+name: Rust Quality Pipeline for PRs
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  quality:
+    uses: harmony-labs/workflow-rust/.github/workflows/quality.yaml@main
+    with:
+      lint: false
