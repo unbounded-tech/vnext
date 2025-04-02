@@ -14,7 +14,7 @@ jobs:
   # Some commits such are chore: will not trigger a version bump and tag! This is by design.
   version-and-tag:
     name: Version and Tag
-    uses: harmony-labs/workflow-release/.github/workflows/version-and-tag.yaml@v0.3.1
+    uses: harmony-labs/workflow-release/.github/workflows/version-and-tag.yaml@17133625acfd4813b74f76c07dd935b3dda22d14 # v0.3.1
     secrets: inherit
     with:
       useDeployKey: true
