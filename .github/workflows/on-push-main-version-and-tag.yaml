@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   quality:
-    uses: harmony-labs/workflow-rust/.github/workflows/quality.yaml@main
+    uses: harmony-labs/workflow-rust-quality/.github/workflows/workflow.yaml@v1.0.0
     with:
       lint: false
 
@@ -19,7 +19,7 @@ jobs:
   version-and-tag:
     name: Version and Tag
     needs: quality
-    uses: harmony-labs/workflow-release/.github/workflows/version-and-tag.yaml@v0.3.1
+    uses: harmony-labs/workflow-vnext-tag/.github/workflows/workflow.yaml@v1.0.0
     secrets: inherit
     with:
       useDeployKey: true
