@@ -7,6 +7,6 @@ on:
 
 jobs:
   quality:
-    uses: harmony-labs/workflow-rust/.github/workflows/quality.yaml@main
+    uses: harmony-labs/workflow-rust-quality/.github/workflows/workflow.yaml@v1.0.0
     with:
       lint: false
