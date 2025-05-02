@@ -9,6 +9,6 @@ permissions:
 
 jobs:
   release:
-    uses: harmony-labs/workflow-rust-release/.github/workflows/workflow.yaml@v1.0.0
+    uses: harmony-labs/workflow-rust-release/.github/workflows/workflow.yaml@1714f2e03480614a0ba94806bf1a5e997514faa4 # v1.0.0
     with:
       executable_name: ${{ github.event.repository.name }}
