@@ -27,49 +27,83 @@ fn run_and_show_command(cmd: &str, args: &[&str], dir: &Path) -> Output {
     output
 }
 
-// Helper function to initialize a git repository
-fn init_git_repo(dir: &Path) {
-    run_command("git", &["init"], dir);
-    run_command("git", &["config", "user.name", "Test User"], dir);
-    run_command("git", &["config", "user.email", "test@example.com"], dir);
-}
-
-// Helper function to run vnext
 fn run_vnext(dir: &Path) -> String {
-    let output = Command::new("cargo")
-        .args(["run"])
+    // Build the binary first in the project directory
+    let project_dir = std::env::current_dir().expect("Failed to get current directory");
+    println!("> Building vnext binary");
+    Command::new("cargo")
+        .args(["build"])
+        .current_dir(&project_dir)
+        .output()
+        .expect("Failed to build vnext");
+    
+    // Get the path to the built binary
+    let binary_path = project_dir.join("target/debug/vnext");
+    println!("> Running {} in {:?}", binary_path.display(), dir);
+    
+    // Run the binary in the specified directory
+    let output = Command::new(binary_path)
         .current_dir(&dir)
         .output()
         .expect("Failed to execute vnext");
     
-    String::from_utf8_lossy(&output.stdout).trim().to_string()
+    let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    println!("Version: {}", version);
+
+    version
 }
 
 #[test]
-fn test_basic_workflow() {
-    // Create a temporary directory for the repository
+fn integration_tests() {
+
+    // 1. Run against current directory as sanity check
+    println!("Running vnext in current directory");
+    let current_dir = std::env::current_dir().expect("Failed to get current directory");
+    println!("Current directory: {:?}", current_dir);
+    let version = run_vnext(&current_dir);
+
+    // version should be greater than 0.0.0, but it's a string so we need to parse it
+    let version_parts: Vec<&str> = version.split('.').collect();
+    assert!(version_parts.len() == 3, "Version should be in the format x.y.z");
+    let major: u32 = version_parts[0].parse().expect("Failed to parse major version");
+    let minor: u32 = version_parts[1].parse().expect("Failed to parse minor version");
+    let patch: u32 = version_parts[2].parse().expect("Failed to parse patch version");
+    assert!(major > 0 || minor > 0 || patch > 0, "Version should be greater than 0.0.0");
+    println!("Asserted version {} is greater than 0.0.0", version);
+
+    // 2. Run vnext on empty directory
+    print!("Running vnext in empty directory");
     let temp_dir = tempfile::tempdir().expect("Failed to create temporary directory");
     let repo_path = temp_dir.path();
-
     println!("Temporary directory created at: {:?}", repo_path);
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "0.0.0", "Version should be 0.0.0 on empty repo");
+    println!("Asserted version {} is 0.0.0", version);
+
+    // 3. Initialize the directory as a git repository  
+    println!("Initializing git repository in temporary directory, and running vnext again");  
+    run_and_show_command("git", &["init"], repo_path);
+    run_and_show_command("git", &["config", "user.name", "patrickleet"], repo_path);
+    run_and_show_command("git", &["config", "user.email", "pat@patscott.io"], repo_path);
+
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "0.0.0", "Version should still be 0.0.0 after git init");
+    println!("Asserted version {} is still 0.0.0", version);
     
-    // Initialize git repository
-    init_git_repo(repo_path);
-    println!("Initialized git repository at: {:?}", repo_path);
-    
-    // Create a README file
+    // 4. Create a README file and commit it
+    println!("Creating README file and committing it, then running vnext again");
     let readme_path = repo_path.join("README.md");
     fs::write(&readme_path, "# Test Repository").expect("Failed to write README file");
-
     println!("Created README file at: {:?}", readme_path);
-    // Show git status and perform git operations
+
     run_and_show_command("git", &["status"], repo_path);
     run_and_show_command("git", &["add", readme_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "feat: Initial commit"], repo_path);
-    let version = run_and_show_command("vnext", &[], repo_path);
-
-    // assert version's output is "0.1.0"
-    assert_eq!(String::from_utf8_lossy(&version.stdout), "0.1.0\n", "Initial version should be 0.1.0");
+    
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "0.1.0", "Initial version should be 0.1.0");
+    println!("Asserted version {} is 0.1.0", version);
 
     
     // // Add tag for the initial version
