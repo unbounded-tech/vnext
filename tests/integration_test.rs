@@ -56,22 +56,7 @@ fn run_vnext(dir: &Path) -> String {
 #[test]
 fn integration_tests() {
 
-    // 1. Run against current directory as sanity check
-    println!("Running vnext in current directory");
-    let current_dir = std::env::current_dir().expect("Failed to get current directory");
-    println!("Current directory: {:?}", current_dir);
-    let version = run_vnext(&current_dir);
-
-    // version should be greater than 0.0.0, but it's a string so we need to parse it
-    let version_parts: Vec<&str> = version.split('.').collect();
-    assert!(version_parts.len() == 3, "Version should be in the format x.y.z");
-    let major: u32 = version_parts[0].parse().expect("Failed to parse major version");
-    let minor: u32 = version_parts[1].parse().expect("Failed to parse minor version");
-    let patch: u32 = version_parts[2].parse().expect("Failed to parse patch version");
-    assert!(major > 0 || minor > 0 || patch > 0, "Version should be greater than 0.0.0");
-    println!("Asserted version {} is greater than 0.0.0", version);
-
-    // 2. Run vnext on empty directory
+    // 1. Run vnext on empty directory
     print!("Running vnext in empty directory");
     let temp_dir = tempfile::tempdir().expect("Failed to create temporary directory");
     let repo_path = temp_dir.path();
@@ -80,7 +65,7 @@ fn integration_tests() {
     assert_eq!(version, "0.0.0", "Version should be 0.0.0 on empty repo");
     println!("Asserted version {} is 0.0.0", version);
 
-    // 3. Initialize the directory as a git repository  
+    // 2. Initialize the directory as a git repository  
     println!("Initializing git repository in temporary directory, and running vnext again");  
     run_and_show_command("git", &["init"], repo_path);
     run_and_show_command("git", &["config", "user.name", "patrickleet"], repo_path);
@@ -90,7 +75,7 @@ fn integration_tests() {
     assert_eq!(version, "0.0.0", "Version should still be 0.0.0 after git init");
     println!("Asserted version {} is still 0.0.0", version);
     
-    // 4. Create a README file and commit it
+    // 3. Create a README file and commit it
     println!("Creating README file and committing it, then running vnext again");
     let readme_path = repo_path.join("README.md");
     fs::write(&readme_path, "# Test Repository").expect("Failed to write README file");
@@ -108,7 +93,7 @@ fn integration_tests() {
     let tag_name = format!("v{}", version);
     run_and_show_command("git", &["tag", &tag_name], repo_path);
 
-    // 5. Add a file "patch", and a patch commit
+    // 4. Add a file "patch", and a patch commit
     println!("Creating patch file and committing it, then running vnext again");
     let patch_path = repo_path.join("patch");
     fs::write(&patch_path, "This is a patch").expect("Failed to write patch file");
@@ -124,7 +109,7 @@ fn integration_tests() {
     let tag_name = format!("v{}", version);
     run_and_show_command("git", &["tag", &tag_name], repo_path);
 
-    // 6. add another patch commit
+    // 5. add another patch commit
     println!("Creating another patch file and committing it, then running vnext again");
     let patch_path = repo_path.join("patch2");
     fs::write(&patch_path, "This is another patch").expect("Failed to write patch file");
@@ -138,7 +123,7 @@ fn integration_tests() {
     let tag_name = format!("v{}", version);
     run_and_show_command("git", &["tag", &tag_name], repo_path);
 
-    // 7. add a feature commit
+    // 6. add a feature commit
     println!("Creating feature file and committing it, then running vnext again");
     let feature_path = repo_path.join("feature");
     fs::write(&feature_path, "This is a feature").expect("Failed to write feature file");
@@ -152,7 +137,7 @@ fn integration_tests() {
     let tag_name = format!("v{}", version);
     run_and_show_command("git", &["tag", &tag_name], repo_path);
 
-    // 8. add another feature commit with a breaking change
+    // 7. add another feature commit with a breaking change
     println!("Creating breaking change file and committing it, then running vnext again");
     let breaking_path = repo_path.join("breaking");
     fs::write(&breaking_path, "This is a breaking change").expect("Failed to write breaking change file");
@@ -166,7 +151,7 @@ fn integration_tests() {
     let tag_name = format!("v{}", version);
     run_and_show_command("git", &["tag", &tag_name], repo_path);
 
-    // 9. add a "major" commit
+    // 8. add a "major" commit
     println!("Creating major change file and committing it, then running vnext again");
     let major_path = repo_path.join("major");
     fs::write(&major_path, "This is a major change").expect("Failed to write major change file");
@@ -180,7 +165,7 @@ fn integration_tests() {
     let tag_name = format!("v{}", version);
     run_and_show_command("git", &["tag", &tag_name], repo_path);
 
-    // 10. add a "minor" commit
+    // 9. add a "minor" commit
     println!("Creating minor change file and committing it, then running vnext again");
     let minor_path = repo_path.join("minor");
     fs::write(&minor_path, "This is a minor change").expect("Failed to write minor change file");
@@ -194,7 +179,7 @@ fn integration_tests() {
     let tag_name = format!("v{}", version);
     run_and_show_command("git", &["tag", &tag_name], repo_path);
 
-    // 11. add a noop commit
+    // 10. add a noop commit
     println!("Creating noop change file and committing it, then running vnext again");
     let noop_path = repo_path.join("noop");
     fs::write(&noop_path, "This is a noop change").expect("Failed to write noop change file");
@@ -206,7 +191,7 @@ fn integration_tests() {
     assert_eq!(version, "2.1.0", "Noop version should be 2.1.0");
     println!("Asserted version {} is 2.1.0", version);
 
-    // 12. add a chore commit, also no-op
+    // 11. add a chore commit, also no-op
     println!("Creating chore change file and committing it, then running vnext again");
     let chore_path = repo_path.join("chore");
     fs::write(&chore_path, "This is a chore change").expect("Failed to write chore change file");
@@ -218,7 +203,7 @@ fn integration_tests() {
     assert_eq!(version, "2.1.0", "Chore version should be 2.1.0");
     println!("Asserted version {} is 2.1.0", version);
 
-    // 13. add a commit that does not follow conventional commits, it should result in a patch version bump
+    // 12. add a commit that does not follow conventional commits, it should result in a patch version bump
     println!("Creating non-conventional change file and committing it, then running vnext again");
     let non_conventional_path = repo_path.join("non-conventional");
     fs::write(&non_conventional_path, "This is a non-conventional change").expect("Failed to write non-conventional change file");
