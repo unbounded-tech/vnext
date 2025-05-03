@@ -1,7 +1,6 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Output};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 // Helper function to run a command and return its output
 fn run_command(cmd: &str, args: &[&str], dir: &Path) -> Output {
@@ -105,35 +104,132 @@ fn integration_tests() {
     assert_eq!(version, "0.1.0", "Initial version should be 0.1.0");
     println!("Asserted version {} is 0.1.0", version);
 
+    // Add tag for the initial version
+    let tag_name = format!("v{}", version);
+    run_and_show_command("git", &["tag", &tag_name], repo_path);
+
+    // 5. Add a file "patch", and a patch commit
+    println!("Creating patch file and committing it, then running vnext again");
+    let patch_path = repo_path.join("patch");
+    fs::write(&patch_path, "This is a patch").expect("Failed to write patch file");
+    println!("Created patch file at: {:?}", patch_path);
+    run_and_show_command("git", &["status"], repo_path);
+    run_and_show_command("git", &["add", patch_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "fix: Bug fix"], repo_path);
+
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "0.1.1", "Patch version should be 0.1.1");
+    println!("Asserted version {} is 0.1.1", version);
     
-    // // Add tag for the initial version
-    // add_tag(repo_path, &format!("v{}", version));
-    
-    // // Add a patch commit
-    // add_commit(repo_path, "fix: bug fix", true);
-    
-    // // Run vnext - should return 0.1.1
-    // let version = run_vnext(repo_path);
-    // assert_eq!(version, "0.1.1", "Patch commit should bump patch version");
-    
-    // // Add tag for the patch version
-    // add_tag(repo_path, &format!("v{}", version));
-    
-    // // Add a minor commit
-    // add_commit(repo_path, "feat: new feature", true);
-    
-    // // Run vnext - should return 0.2.0
-    // let version = run_vnext(repo_path);
-    // assert_eq!(version, "0.2.0", "Feature commit should bump minor version");
-    
-    // // Add tag for the minor version
-    // add_tag(repo_path, &format!("v{}", version));
-    
-    // // Add a major commit
-    // add_commit(repo_path, "BREAKING CHANGE: major update", true);
-    
-    // // Run vnext - should return 1.0.0
-    // let version = run_vnext(repo_path);
-    // assert_eq!(version, "1.0.0", "Breaking change should bump major version");
+    let tag_name = format!("v{}", version);
+    run_and_show_command("git", &["tag", &tag_name], repo_path);
+
+    // 6. add another patch commit
+    println!("Creating another patch file and committing it, then running vnext again");
+    let patch_path = repo_path.join("patch2");
+    fs::write(&patch_path, "This is another patch").expect("Failed to write patch file");
+    println!("Created patch file at: {:?}", patch_path);
+    run_and_show_command("git", &["status"], repo_path);
+    run_and_show_command("git", &["add", patch_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "fix: Another bug fix"], repo_path);
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "0.1.2", "Patch version should be 0.1.2");
+    println!("Asserted version {} is 0.1.2", version);
+    let tag_name = format!("v{}", version);
+    run_and_show_command("git", &["tag", &tag_name], repo_path);
+
+    // 7. add a feature commit
+    println!("Creating feature file and committing it, then running vnext again");
+    let feature_path = repo_path.join("feature");
+    fs::write(&feature_path, "This is a feature").expect("Failed to write feature file");
+    println!("Created feature file at: {:?}", feature_path);
+    run_and_show_command("git", &["status"], repo_path);
+    run_and_show_command("git", &["add", feature_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "feat: New feature"], repo_path);
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "0.2.0", "Feature version should be 0.2.0");
+    println!("Asserted version {} is 0.2.0", version);
+    let tag_name = format!("v{}", version);
+    run_and_show_command("git", &["tag", &tag_name], repo_path);
+
+    // 8. add another feature commit with a breaking change
+    println!("Creating breaking change file and committing it, then running vnext again");
+    let breaking_path = repo_path.join("breaking");
+    fs::write(&breaking_path, "This is a breaking change").expect("Failed to write breaking change file");
+    println!("Created breaking change file at: {:?}", breaking_path);
+    run_and_show_command("git", &["status"], repo_path);
+    run_and_show_command("git", &["add", breaking_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "feat: new stuff \n\nBREAKING CHANGE: old stuff removed"], repo_path);
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "1.0.0", "Breaking change version should be 1.0.0");
+    println!("Asserted version {} is 1.0.0", version);
+    let tag_name = format!("v{}", version);
+    run_and_show_command("git", &["tag", &tag_name], repo_path);
+
+    // 9. add a "major" commit
+    println!("Creating major change file and committing it, then running vnext again");
+    let major_path = repo_path.join("major");
+    fs::write(&major_path, "This is a major change").expect("Failed to write major change file");
+    println!("Created major change file at: {:?}", major_path);
+    run_and_show_command("git", &["status"], repo_path);
+    run_and_show_command("git", &["add", major_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "major: v2"], repo_path);
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "2.0.0", "Major version should be 2.0.0");
+    println!("Asserted version {} is 2.0.0", version);
+    let tag_name = format!("v{}", version);
+    run_and_show_command("git", &["tag", &tag_name], repo_path);
+
+    // 10. add a "minor" commit
+    println!("Creating minor change file and committing it, then running vnext again");
+    let minor_path = repo_path.join("minor");
+    fs::write(&minor_path, "This is a minor change").expect("Failed to write minor change file");
+    println!("Created minor change file at: {:?}", minor_path);
+    run_and_show_command("git", &["status"], repo_path);
+    run_and_show_command("git", &["add", minor_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "minor: bump"], repo_path);
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "2.1.0", "Minor version should be 2.1.0");
+    println!("Asserted version {} is 2.1.0", version);
+    let tag_name = format!("v{}", version);
+    run_and_show_command("git", &["tag", &tag_name], repo_path);
+
+    // 11. add a noop commit
+    println!("Creating noop change file and committing it, then running vnext again");
+    let noop_path = repo_path.join("noop");
+    fs::write(&noop_path, "This is a noop change").expect("Failed to write noop change file");
+    println!("Created noop change file at: {:?}", noop_path);
+    run_and_show_command("git", &["status"], repo_path);
+    run_and_show_command("git", &["add", noop_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "chore: noop"], repo_path);
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "2.1.0", "Noop version should be 2.1.0");
+    println!("Asserted version {} is 2.1.0", version);
+
+    // 12. add a chore commit, also no-op
+    println!("Creating chore change file and committing it, then running vnext again");
+    let chore_path = repo_path.join("chore");
+    fs::write(&chore_path, "This is a chore change").expect("Failed to write chore change file");
+    println!("Created chore change file at: {:?}", chore_path);
+    run_and_show_command("git", &["status"], repo_path);
+    run_and_show_command("git", &["add", chore_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "chore: noop"], repo_path);
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "2.1.0", "Chore version should be 2.1.0");
+    println!("Asserted version {} is 2.1.0", version);
+
+    // 13. add a commit that does not follow conventional commits, it should result in a patch version bump
+    println!("Creating non-conventional change file and committing it, then running vnext again");
+    let non_conventional_path = repo_path.join("non-conventional");
+    fs::write(&non_conventional_path, "This is a non-conventional change").expect("Failed to write non-conventional change file");
+    println!("Created non-conventional change file at: {:?}", non_conventional_path);
+    run_and_show_command("git", &["status"], repo_path);
+    run_and_show_command("git", &["add", non_conventional_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "non-conventional: bump"], repo_path);
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "2.1.1", "Non-conventional version should be 2.1.1");
+    println!("Asserted version {} is 2.1.1", version);
+    let tag_name = format!("v{}", version);
+    run_and_show_command("git", &["tag", &tag_name], repo_path);
 }
 
