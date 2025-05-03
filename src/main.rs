@@ -65,11 +65,9 @@ fn main() {
     let repo = match Repository::open(".") {
         Ok(repo) => repo,
         Err(e) => {
-            log::error!(
-                "Failed to open Git repository: {}. This command must be run in a Git repository directory.",
-                e
-            );
-            std::process::exit(1);
+            log::debug!("No Git repository found: {}. Assuming version 0.0.0.", e);
+            println!("0.0.0");
+            std::process::exit(0);
         }
     };
 
@@ -77,19 +75,21 @@ fn main() {
         Ok(head_ref) => match head_ref.peel_to_commit() {
             Ok(commit) => commit,
             Err(e) => {
-                log::error!(
-                    "Failed to resolve HEAD to a commit: {}. The repository must have at least one commit.",
+                log::debug!(
+                    "Failed to resolve HEAD to a commit: {}. Assuming version 0.0.0.",
                     e
                 );
-                std::process::exit(1);
+                println!("0.0.0");
+                std::process::exit(0);
             }
         },
         Err(e) => {
-            log::error!(
-                "Failed to get HEAD: {}. The repository must have at least one commit on a branch (e.g., 'main' or 'master').",
+            log::debug!(
+                "Failed to get HEAD: {}. Assuming version 0.0.0.",
                 e
             );
-            std::process::exit(1);
+            println!("0.0.0");
+            std::process::exit(0);
         }
     };
     log::debug!("HEAD commit: {}", head.id());
@@ -122,10 +122,7 @@ fn main() {
     log::debug!("Last tag or base commit: {}", last_tag_commit.id());
 
     // Determine the base commit: use merge base with main if tag exists, otherwise earliest commit
-    let base_commit = if last_tag_commit.id() == head.id() && head.parents().count() == 0 {
-        log::debug!("Single commit repo with no tags, analyzing all commits");
-        head.parents().next().map(|c| c.clone()).unwrap_or_else(|| head.clone())
-    } else if find_latest_tag(&repo).is_some() {
+    let base_commit = if find_latest_tag(&repo).is_some() {
         let merge_base = repo
             .merge_base(head.id(), last_tag_commit.id())
             .expect("Failed to find merge base between HEAD and tag");
@@ -214,21 +211,17 @@ fn calculate_version_bump(
 
     log::debug!("Walking commits from {} to base {}", to.id(), base_id);
 
-    // Walk from HEAD until we reach the base commit, excluding the base itself.
-    while current.id() != base_id {
-        if seen.contains(&current.id()) {
-            break; // Avoid infinite loops.
-        }
-        seen.insert(current.id());
-        commit_count += 1;
-
-        let message = current.message().unwrap_or("");
+    // Special case: if base_id and to.id() are the same (single commit repo),
+    // analyze the commit itself
+    if to.id() == base_id {
+        log::debug!("Single commit repo, analyzing the commit itself");
+        let message = to.message().unwrap_or("");
         log::debug!(
-            "Pending commit: {} - {}",
-            current.id(),
+            "Analyzing commit: {} - {}",
+            to.id(),
             message.lines().next().unwrap_or("")
         );
-
+        
         if major_re.is_match(message) {
             bump.major = true;
             summary.major += 1;
@@ -241,11 +234,42 @@ fn calculate_version_bump(
         } else {
             summary.noop += 1;
         }
+        
+        commit_count = 1;
+    } else {
+        // Walk from HEAD until we reach the base commit, excluding the base itself.
+        while current.id() != base_id {
+            if seen.contains(&current.id()) {
+                break; // Avoid infinite loops.
+            }
+            seen.insert(current.id());
+            commit_count += 1;
 
-        if current.parents().count() == 0 {
-            break; // Reached the root.
+            let message = current.message().unwrap_or("");
+            log::debug!(
+                "Pending commit: {} - {}",
+                current.id(),
+                message.lines().next().unwrap_or("")
+            );
+
+            if major_re.is_match(message) {
+                bump.major = true;
+                summary.major += 1;
+            } else if minor_re.is_match(message) {
+                bump.minor = true;
+                summary.minor += 1;
+            } else if !noop_re.is_match(message) {
+                bump.patch = true;
+                summary.patch += 1;
+            } else {
+                summary.noop += 1;
+            }
+
+            if current.parents().count() == 0 {
+                break; // Reached the root.
+            }
+            current = current.parents().next().unwrap().clone();
         }
-        current = current.parents().next().unwrap().clone();
     }
 
     log::debug!("Total commits analyzed: {}", commit_count);
