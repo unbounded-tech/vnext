@@ -59,9 +59,15 @@ Below is an enhanced explanation for the **Automated Version Calculation** featu
    ```
 2. **Build the project:**
    ```bash
+   # Standard build (uses system OpenSSL)
    cargo build --release
+   
+   # Build with vendored OpenSSL (standalone binary)
+   cargo build --release --features vendored
    ```
    The compiled binary will be located at `target/release/vnext`.
+
+   > **Note:** The `vendored` feature statically links OpenSSL, creating a standalone binary that works on systems without OpenSSL installed. This is recommended for distribution but increases build time.
 
 ## Usage
 
@@ -83,7 +89,12 @@ This will output the new semantic version, ready for use in your release pipelin
    ```bash
    git clone https://github.com/harmony-labs/vnext.git
    cd vnext
-   cargo build --release
+   
+   # For development (faster build)
+   cargo build
+   
+   # For release with vendored OpenSSL
+   cargo build --release --features vendored
    ```
 2. **Run the Tool:**
    ```bash
@@ -115,10 +126,38 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        
+      - name: Install OpenSSL
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+        
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+            
       - name: Calculate Next Version
         run: vnext
 ```
 This snippet shows how to use vnext to compute the next version, which you can then use to tag your repository or drive further release steps.
+
+### CI Optimization
+
+The project is configured for optimal CI performance:
+
+1. **Dependency Caching**: GitHub Actions workflows cache Rust dependencies and build artifacts to avoid recompilation.
+2. **OpenSSL Configuration**:
+   - For CI and development builds, system OpenSSL is used (faster builds)
+   - For release builds, vendored OpenSSL is used (standalone binaries)
+3. **Incremental Compilation**: Enabled by default to speed up rebuilds during development.
+4. **Optimized Integration Tests**: Tests build the binary once instead of for each test case.
+
+These optimizations significantly reduce build times in CI environments while ensuring release builds produce standalone binaries.
 
 ## Contributing
 
