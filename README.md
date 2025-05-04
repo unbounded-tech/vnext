@@ -75,6 +75,47 @@ vnext
 ```
 This will output the new semantic version, ready for use in your release pipelines.
 
+### Generating a Changelog
+
+To generate a markdown-formatted changelog based on your Git commit history, use the `--changelog` flag:
+```bash
+vnext --changelog
+```
+
+This will output a structured changelog with the following format:
+
+```markdown
+# 1.0.0
+
+## Breaking Changes
+- Big refactor
+- API removed
+
+## Changes
+
+### Features
+- Add new widget
+
+### Chores
+- Update docs
+
+## UI Changes
+
+### Features
+- Add new button
+
+### Fixes
+- Fix button alignment
+```
+
+The changelog organizes commits as follows:
+
+1. **Breaking Changes**: Commits with `major:` prefix or containing `BREAKING CHANGE:` are highlighted at the top
+2. **Scoped Changes**: Commits with scope information (e.g., `feat(ui):`) are grouped under scope-specific headings
+3. **Unscoped Changes**: Commits without scope are grouped under a general "Changes" section
+
+Each section contains subheadings for Features, Fixes, and Chores based on the commit type.
+
 ## Developer Guide
 
 ### Building and Running

@@ -53,6 +53,34 @@ fn run_vnext(dir: &Path) -> String {
     version
 }
 
+fn run_vnext_with_args(dir: &Path, args: &[&str]) -> String {
+    // Build the binary first in the project directory
+    let project_dir = std::env::current_dir().expect("Failed to get current directory");
+    println!("> Building vnext binary");
+    Command::new("cargo")
+        .args(["build"])
+        .current_dir(&project_dir)
+        .output()
+        .expect("Failed to build vnext");
+    
+    // Get the path to the built binary
+    let binary_path = project_dir.join("target/debug/vnext");
+    println!("> Running {} {} in {:?}", binary_path.display(), args.join(" "), dir);
+    
+    // Run the binary in the specified directory with the provided arguments
+    let output = Command::new(binary_path)
+        .args(args)
+        .current_dir(&dir)
+        .output()
+        .expect("Failed to execute vnext");
+    
+    let output_str = String::from_utf8_lossy(&output.stdout).to_string();
+
+    println!("Output: \n{}", output_str);
+
+    output_str
+}
+
 #[test]
 fn integration_tests() {
 
@@ -216,5 +244,88 @@ fn integration_tests() {
     println!("Asserted version {} is 2.1.1", version);
     let tag_name = format!("v{}", version);
     run_and_show_command("git", &["tag", &tag_name], repo_path);
+}
+
+#[test]
+fn test_changelog() {
+    // Create a temporary directory for the test repository
+    let temp_dir = tempfile::tempdir().expect("Failed to create temporary directory");
+    let repo_path = temp_dir.path();
+    println!("Temporary directory created at: {:?}", repo_path);
+    
+    // Initialize git repository
+    run_and_show_command("git", &["init"], repo_path);
+    run_and_show_command("git", &["config", "user.name", "Test User"], repo_path);
+    run_and_show_command("git", &["config", "user.email", "test@example.com"], repo_path);
+    
+    // Create and commit files with different commit types and scopes
+    // 1. Add a feature with UI scope
+    let ui_feature_path = repo_path.join("ui-feature.txt");
+    fs::write(&ui_feature_path, "UI Feature").expect("Failed to write UI feature file");
+    run_and_show_command("git", &["add", ui_feature_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "feat(ui): Add new button"], repo_path);
+    
+    // 2. Add a fix with UI scope
+    let ui_fix_path = repo_path.join("ui-fix.txt");
+    fs::write(&ui_fix_path, "UI Fix").expect("Failed to write UI fix file");
+    run_and_show_command("git", &["add", ui_fix_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "fix(ui): Fix button alignment"], repo_path);
+    
+    // 3. Add an unscoped feature
+    let feature_path = repo_path.join("feature.txt");
+    fs::write(&feature_path, "Feature").expect("Failed to write feature file");
+    run_and_show_command("git", &["add", feature_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "feat: Add new widget"], repo_path);
+    
+    // 4. Add a chore
+    let chore_path = repo_path.join("chore.txt");
+    fs::write(&chore_path, "Chore").expect("Failed to write chore file");
+    run_and_show_command("git", &["add", chore_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "chore: Update docs"], repo_path);
+    
+    // 5. Add a major change
+    let major_path = repo_path.join("major.txt");
+    fs::write(&major_path, "Major").expect("Failed to write major file");
+    run_and_show_command("git", &["add", major_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "major: Big refactor"], repo_path);
+    
+    // 6. Add a breaking change
+    let breaking_path = repo_path.join("breaking.txt");
+    fs::write(&breaking_path, "Breaking").expect("Failed to write breaking file");
+    run_and_show_command("git", &["add", breaking_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "feat: Remove API\n\nBREAKING CHANGE: API removed"], repo_path);
+    
+    // Run vnext with --changelog flag
+    let changelog = run_vnext_with_args(repo_path, &["--changelog"]);
+    
+    // Verify the changelog content
+    assert!(changelog.contains("# 1.0.0"), "Changelog should contain the version 1.0.0");
+    
+    // Check for breaking changes section
+    assert!(changelog.contains("## Breaking Changes"), "Changelog should have a Breaking Changes section");
+    assert!(changelog.contains("- Big refactor"), "Breaking changes should include 'Big refactor'");
+    assert!(changelog.contains("- API removed"), "Breaking changes should include 'API removed'");
+    
+    // Check for unscoped changes section
+    assert!(changelog.contains("## Changes"), "Changelog should have a Changes section");
+    assert!(changelog.contains("### Features"), "Changes should have a Features subsection");
+    assert!(changelog.contains("- Add new widget"), "Features should include 'Add new widget'");
+    assert!(changelog.contains("### Chores"), "Changes should have a Chores subsection");
+    assert!(changelog.contains("- Update docs"), "Chores should include 'Update docs'");
+    
+    // Check for UI scoped changes section
+    assert!(changelog.contains("## Ui Changes"), "Changelog should have a UI Changes section");
+    assert!(changelog.contains("### Features"), "UI Changes should have a Features subsection");
+    assert!(changelog.contains("- Add new button"), "UI Features should include 'Add new button'");
+    assert!(changelog.contains("### Fixes"), "UI Changes should have a Fixes subsection");
+    assert!(changelog.contains("- Fix button alignment"), "UI Fixes should include 'Fix button alignment'");
+    
+    // Verify the order of sections
+    let breaking_pos = changelog.find("## Breaking Changes").unwrap_or(0);
+    let changes_pos = changelog.find("## Changes").unwrap_or(0);
+    let ui_pos = changelog.find("## Ui Changes").unwrap_or(0);
+    
+    assert!(breaking_pos < changes_pos, "Breaking Changes should come before Changes");
+    assert!(changes_pos < ui_pos, "Changes should come before Ui Changes");
 }
 

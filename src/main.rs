@@ -2,6 +2,7 @@ use clap::Parser;
 use git2::{Commit, Repository};
 use regex::Regex;
 use semver::{BuildMetadata, Prerelease, Version};
+use std::collections::HashMap;
 
 mod logging;
 
@@ -9,6 +10,8 @@ mod logging;
 const MAJOR_REGEX_STR: &str = r"(?m)^(?:major(?:\([^)]+\))?:.*|BREAKING CHANGE:.*)";
 const MINOR_REGEX_STR: &str = r"(?m)^(?:minor(?:\([^)]+\))?:.*|feat(?:\([^)]+\))?:.*)$";
 const NOOP_REGEX_STR: &str = r"(?m)^(?:noop(?:\([^)]+\))?:.*|chore(?:\([^)]+\))?:.*)$";
+const FIX_REGEX_STR: &str = r"(?m)^fix(?:\([^)]+\))?:.*$";
+const COMMIT_PATTERN: &str = r"^(major|minor|feat|fix|chore|noop)(?:\(([^)]+)\))?:\s*(.*)$|^BREAKING CHANGE:\s*(.*)$";
 
 #[derive(Parser)]
 #[clap(author, version, about = "Calculate the next version based on conventional commits")]
@@ -24,6 +27,10 @@ struct Cli {
     /// Regex for commits that should not trigger a version bump
     #[clap(long, default_value = NOOP_REGEX_STR)]
     noop: String,
+
+    /// Generate a markdown-formatted changelog
+    #[clap(long)]
+    changelog: bool,
 }
 
 struct VersionBump {
@@ -32,11 +39,47 @@ struct VersionBump {
     patch: bool,
 }
 
+/// Stores commit messages by category for a specific scope
+struct CategoryCommits {
+    features: Vec<String>,
+    fixes: Vec<String>,
+    chores: Vec<String>,
+}
+
+impl CategoryCommits {
+    fn new() -> Self {
+        CategoryCommits {
+            features: Vec::new(),
+            fixes: Vec::new(),
+            chores: Vec::new(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.features.is_empty() && self.fixes.is_empty() && self.chores.is_empty()
+    }
+}
+
 struct CommitSummary {
     major: u32,
     minor: u32,
     patch: u32,
     noop: u32,
+    breaking_changes: Vec<String>,
+    scoped_commits: HashMap<String, CategoryCommits>,
+}
+
+impl CommitSummary {
+    fn new() -> Self {
+        CommitSummary {
+            major: 0,
+            minor: 0,
+            patch: 0,
+            noop: 0,
+            breaking_changes: Vec::new(),
+            scoped_commits: HashMap::new(),
+        }
+    }
 }
 
 fn main() {
@@ -48,6 +91,7 @@ fn main() {
     log::debug!("Major bump regex: {}", cli.major);
     log::debug!("Minor bump regex: {}", cli.minor);
     log::debug!("No-op regex: {}", cli.noop);
+    log::debug!("Changelog mode: {}", cli.changelog);
 
     let major_re = Regex::new(&cli.major).unwrap_or_else(|e| {
         log::error!("Invalid major regex '{}': {}", cli.major, e);
@@ -59,6 +103,10 @@ fn main() {
     });
     let noop_re = Regex::new(&cli.noop).unwrap_or_else(|e| {
         log::error!("Invalid noop regex '{}': {}", cli.noop, e);
+        std::process::exit(1);
+    });
+    let fix_re = Regex::new(FIX_REGEX_STR).unwrap_or_else(|e| {
+        log::error!("Invalid fix regex '{}': {}", FIX_REGEX_STR, e);
         std::process::exit(1);
     });
 
@@ -133,7 +181,7 @@ fn main() {
     };
     log::debug!("Base commit for analysis: {}", base_commit.id());
 
-    let (bump, summary) = calculate_version_bump(&repo, &base_commit, &head, &major_re, &minor_re, &noop_re);
+    let (bump, summary) = calculate_version_bump(&repo, &base_commit, &head, &major_re, &minor_re, &noop_re, &fix_re);
 
     log::debug!(
         "Commits pending release: {} major, {} minor, {} patch, {} noop",
@@ -147,7 +195,12 @@ fn main() {
     );
     log::debug!("Next version: {}", next_version);
 
-    println!("{}", next_version);
+    if cli.changelog {
+        let changelog = generate_changelog(&next_version, &summary);
+        println!("{}", changelog);
+    } else {
+        println!("{}", next_version);
+    }
 }
 
 fn find_main_branch(repo: &Repository) -> Option<String> {
@@ -191,18 +244,17 @@ fn calculate_version_bump(
     major_re: &Regex,
     minor_re: &Regex,
     noop_re: &Regex,
+    fix_re: &Regex,
 ) -> (VersionBump, CommitSummary) {
     let mut bump = VersionBump {
         major: false,
         minor: false,
         patch: false,
     };
-    let mut summary = CommitSummary {
-        major: 0,
-        minor: 0,
-        patch: 0,
-        noop: 0,
-    };
+    let mut summary = CommitSummary::new();
+    
+    // Compile the regex for parsing commit messages
+    let commit_pattern = Regex::new(COMMIT_PATTERN).unwrap();
     let mut commit_count = 0;
 
     let mut current = to.clone();
@@ -222,18 +274,7 @@ fn calculate_version_bump(
             message.lines().next().unwrap_or("")
         );
         
-        if major_re.is_match(message) {
-            bump.major = true;
-            summary.major += 1;
-        } else if minor_re.is_match(message) {
-            bump.minor = true;
-            summary.minor += 1;
-        } else if !noop_re.is_match(message) {
-            bump.patch = true;
-            summary.patch += 1;
-        } else {
-            summary.noop += 1;
-        }
+        process_commit_message(&mut bump, &mut summary, message, major_re, minor_re, noop_re, fix_re, &commit_pattern);
         
         commit_count = 1;
     } else {
@@ -252,18 +293,7 @@ fn calculate_version_bump(
                 message.lines().next().unwrap_or("")
             );
 
-            if major_re.is_match(message) {
-                bump.major = true;
-                summary.major += 1;
-            } else if minor_re.is_match(message) {
-                bump.minor = true;
-                summary.minor += 1;
-            } else if !noop_re.is_match(message) {
-                bump.patch = true;
-                summary.patch += 1;
-            } else {
-                summary.noop += 1;
-            }
+            process_commit_message(&mut bump, &mut summary, message, major_re, minor_re, noop_re, fix_re, &commit_pattern);
 
             if current.parents().count() == 0 {
                 break; // Reached the root.
@@ -293,6 +323,187 @@ fn calculate_next_version(current: &Version, bump: &VersionBump) -> Version {
     }
 
     next
+}
+
+fn process_commit_message(
+    bump: &mut VersionBump,
+    summary: &mut CommitSummary,
+    message: &str,
+    major_re: &Regex,
+    minor_re: &Regex,
+    noop_re: &Regex,
+    fix_re: &Regex,
+    commit_pattern: &Regex,
+) {
+    // Check for version bump type
+    if major_re.is_match(message) {
+        bump.major = true;
+        summary.major += 1;
+    } else if minor_re.is_match(message) {
+        bump.minor = true;
+        summary.minor += 1;
+    } else if fix_re.is_match(message) {
+        bump.patch = true;
+        summary.patch += 1;
+    } else if !noop_re.is_match(message) {
+        bump.patch = true;
+        summary.patch += 1;
+    } else {
+        summary.noop += 1;
+    }
+
+    // Process for changelog
+    // First, check for BREAKING CHANGE in the message body
+    if message.contains("BREAKING CHANGE:") {
+        for line in message.lines() {
+            if line.starts_with("BREAKING CHANGE:") {
+                let breaking_content = line.trim_start_matches("BREAKING CHANGE:").trim();
+                summary.breaking_changes.push(breaking_content.to_string());
+            }
+        }
+    }
+
+    // Process the first line of the commit message
+    let first_line = message.lines().next().unwrap_or("");
+    
+    if let Some(captures) = commit_pattern.captures(first_line) {
+        // Check if it's a BREAKING CHANGE line
+        if let Some(breaking_content) = captures.get(4) {
+            summary.breaking_changes.push(breaking_content.as_str().trim().to_string());
+            return;
+        }
+
+        // Otherwise, it's a conventional commit
+        if let (Some(commit_type), scope, Some(content)) = (
+            captures.get(1),
+            captures.get(2).map(|m| m.as_str()),
+            captures.get(3),
+        ) {
+            let commit_type = commit_type.as_str();
+            let scope_key = scope.unwrap_or("").to_string();
+            let content = content.as_str().trim().to_string();
+
+            // Get or create the CategoryCommits for this scope
+            let category = summary.scoped_commits
+                .entry(scope_key)
+                .or_insert_with(CategoryCommits::new);
+
+            // Add the commit message to the appropriate category
+            match commit_type {
+                "major" => {
+                    summary.breaking_changes.push(content);
+                }
+                "feat" | "minor" => {
+                    category.features.push(content);
+                }
+                "fix" => {
+                    category.fixes.push(content);
+                }
+                "chore" | "noop" => {
+                    category.chores.push(content);
+                }
+                _ => {
+                    // Unknown commit type, treat as patch
+                    category.fixes.push(content);
+                }
+            }
+        }
+    } else if first_line.starts_with("major:") {
+        // Handle major: commits that don't match the pattern exactly
+        let content = first_line.trim_start_matches("major:").trim().to_string();
+        summary.breaking_changes.push(content);
+    }
+}
+
+fn generate_changelog(version: &Version, summary: &CommitSummary) -> String {
+    let mut changelog = String::new();
+
+    // Add the title with the version
+    changelog.push_str(&format!("# {}\n\n", version));
+
+    // Add breaking changes section if there are any
+    if !summary.breaking_changes.is_empty() {
+        changelog.push_str("## Breaking Changes\n\n");
+        for change in &summary.breaking_changes {
+            changelog.push_str(&format!("- {}\n", change));
+        }
+        changelog.push('\n');
+    }
+
+    // Process unscoped commits first
+    if let Some(unscoped) = summary.scoped_commits.get("") {
+        if !unscoped.is_empty() {
+            changelog.push_str("## Changes\n\n");
+            
+            if !unscoped.features.is_empty() {
+                changelog.push_str("### Features\n\n");
+                for feature in &unscoped.features {
+                    changelog.push_str(&format!("- {}\n", feature));
+                }
+                changelog.push('\n');
+            }
+            
+            if !unscoped.fixes.is_empty() {
+                changelog.push_str("### Fixes\n\n");
+                for fix in &unscoped.fixes {
+                    changelog.push_str(&format!("- {}\n", fix));
+                }
+                changelog.push('\n');
+            }
+            
+            if !unscoped.chores.is_empty() {
+                changelog.push_str("### Chores\n\n");
+                for chore in &unscoped.chores {
+                    changelog.push_str(&format!("- {}\n", chore));
+                }
+                changelog.push('\n');
+            }
+        }
+    }
+
+    // Process scoped commits
+    let mut scopes: Vec<&String> = summary.scoped_commits.keys()
+        .filter(|k| !k.is_empty())
+        .collect();
+    scopes.sort(); // Sort scopes alphabetically
+
+    for scope in scopes {
+        if let Some(category) = summary.scoped_commits.get(scope) {
+            if !category.is_empty() {
+                // Capitalize the scope for the heading
+                let capitalized_scope = scope.chars().next().map(|c| c.to_uppercase().collect::<String>())
+                    .unwrap_or_default() + &scope[1..];
+                
+                changelog.push_str(&format!("## {} Changes\n\n", capitalized_scope));
+                
+                if !category.features.is_empty() {
+                    changelog.push_str("### Features\n\n");
+                    for feature in &category.features {
+                        changelog.push_str(&format!("- {}\n", feature));
+                    }
+                    changelog.push('\n');
+                }
+                
+                if !category.fixes.is_empty() {
+                    changelog.push_str("### Fixes\n\n");
+                    for fix in &category.fixes {
+                        changelog.push_str(&format!("- {}\n", fix));
+                    }
+                    changelog.push('\n');
+                }
+                
+                if !category.chores.is_empty() {
+                    changelog.push_str("### Chores\n\n");
+                    for chore in &category.chores {
+                        changelog.push_str(&format!("- {}\n", chore));
+                    }
+                    changelog.push('\n');
+                }
+            }
+        }
+    }
+
+    changelog
 }
 
 #[cfg(test)]
@@ -375,6 +586,70 @@ mod tests {
     }
 
     #[test]
+    fn test_generate_changelog() {
+        // Create a test version
+        let version = Version::new(1, 0, 0);
+        
+        // Create a test commit summary with various types of changes
+        let mut summary = CommitSummary::new();
+        
+        // Add breaking changes
+        summary.breaking_changes.push("Big refactor".to_string());
+        summary.breaking_changes.push("API removed".to_string());
+        
+        // Add unscoped commits
+        let unscoped = summary.scoped_commits.entry("".to_string()).or_insert_with(CategoryCommits::new);
+        unscoped.features.push("Add new widget".to_string());
+        unscoped.fixes.push("Fix bug in widget".to_string());
+        unscoped.chores.push("Update docs".to_string());
+        
+        // Add UI scoped commits
+        let ui_scoped = summary.scoped_commits.entry("ui".to_string()).or_insert_with(CategoryCommits::new);
+        ui_scoped.features.push("Add new button".to_string());
+        ui_scoped.fixes.push("Fix button alignment".to_string());
+        
+        // Add API scoped commits with only features
+        let api_scoped = summary.scoped_commits.entry("api".to_string()).or_insert_with(CategoryCommits::new);
+        api_scoped.features.push("Add new endpoint".to_string());
+        
+        // Generate the changelog
+        let changelog = generate_changelog(&version, &summary);
+        
+        // Verify the changelog content
+        assert!(changelog.starts_with("# 1.0.0\n\n"), "Changelog should start with the version");
+        
+        // Check for breaking changes section
+        assert!(changelog.contains("## Breaking Changes\n\n"), "Changelog should have a Breaking Changes section");
+        assert!(changelog.contains("- Big refactor\n"), "Breaking changes should include 'Big refactor'");
+        assert!(changelog.contains("- API removed\n"), "Breaking changes should include 'API removed'");
+        
+        // Check for unscoped changes section
+        assert!(changelog.contains("## Changes\n\n"), "Changelog should have a Changes section");
+        assert!(changelog.contains("### Features\n\n- Add new widget\n"), "Changes should include feature 'Add new widget'");
+        assert!(changelog.contains("### Fixes\n\n- Fix bug in widget\n"), "Changes should include fix 'Fix bug in widget'");
+        assert!(changelog.contains("### Chores\n\n- Update docs\n"), "Changes should include chore 'Update docs'");
+        
+        // Check for UI scoped changes section
+        assert!(changelog.contains("## Ui Changes\n\n"), "Changelog should have a UI Changes section");
+        assert!(changelog.contains("### Features\n\n- Add new button\n"), "UI Changes should include feature 'Add new button'");
+        assert!(changelog.contains("### Fixes\n\n- Fix button alignment\n"), "UI Changes should include fix 'Fix button alignment'");
+        
+        // Check for API scoped changes section
+        assert!(changelog.contains("## Api Changes\n\n"), "Changelog should have an API Changes section");
+        assert!(changelog.contains("### Features\n\n- Add new endpoint\n"), "API Changes should include feature 'Add new endpoint'");
+        
+        // Verify the order of sections (Breaking Changes first, then unscoped, then scoped alphabetically)
+        let breaking_pos = changelog.find("## Breaking Changes").unwrap_or(0);
+        let changes_pos = changelog.find("## Changes").unwrap_or(0);
+        let api_pos = changelog.find("## Api Changes").unwrap_or(0);
+        let ui_pos = changelog.find("## Ui Changes").unwrap_or(0);
+        
+        assert!(breaking_pos < changes_pos, "Breaking Changes should come before Changes");
+        assert!(changes_pos < api_pos, "Changes should come before Api Changes");
+        assert!(api_pos < ui_pos, "Api Changes should come before Ui Changes (alphabetical order)");
+    }
+
+    #[test]
     fn test_calculate_version_bump() {
         let temp_dir = tempfile::tempdir().unwrap();
         let repo_path = temp_dir.path().join("test_repo");
@@ -424,6 +699,7 @@ mod tests {
         let major_re = Regex::new(MAJOR_REGEX_STR).unwrap();
         let minor_re = Regex::new(MINOR_REGEX_STR).unwrap();
         let noop_re = Regex::new(NOOP_REGEX_STR).unwrap();
+        let fix_re = Regex::new(FIX_REGEX_STR).unwrap();
 
         for (message, expect_major, expect_minor, expect_patch) in test_cases {
             let to_commit_id = repo
@@ -432,7 +708,7 @@ mod tests {
             let to_commit = repo.find_commit(to_commit_id).unwrap();
 
             let (bump, summary) =
-                calculate_version_bump(&repo, &base_commit, &to_commit, &major_re, &minor_re, &noop_re);
+                calculate_version_bump(&repo, &base_commit, &to_commit, &major_re, &minor_re, &noop_re, &fix_re);
 
             assert_eq!(bump.major, expect_major, "Message: {}", message);
             assert_eq!(bump.minor, expect_minor, "Message: {}", message);
