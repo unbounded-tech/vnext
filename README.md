@@ -15,8 +15,8 @@ Below is an enhanced explanation for the **Automated Version Calculation** featu
 - **Automated Version Calculation:**  
    vnext scans your Git commit history (starting from the last version tag) and examines each commit message using predefined regular expressions. It follows these rules:
 
-   - **Major Version:**  
-      If a commit message contains indicators like `BREAKING CHANGE:` or is marked as a major change (for example, with `major:`), vnext triggers a major version bump. This resets the minor and patch numbers.
+   - **Major Version:**
+      If a commit message contains `BREAKING CHANGE:` (in any commit type, such as `feat:`, `fix:`, or others) or is marked as a major change (with `major:`), vnext triggers a major version bump. This resets the minor and patch numbers.
 
    - **Minor Version:**  
       In the absence of major changes, if any commit message signals the introduction of a new feature—typically using the `feat:` prefix—vnext bumps the minor version and resets the patch number.
