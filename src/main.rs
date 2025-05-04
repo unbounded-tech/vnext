@@ -6,9 +6,10 @@ use semver::{BuildMetadata, Prerelease, Version};
 mod logging;
 
 // Constant regex string literals used for defaults.
-const MAJOR_REGEX_STR: &str = r"(?m)^(?:major(?:\([^)]+\))?:.*|BREAKING CHANGE:.*)";
-const MINOR_REGEX_STR: &str = r"(?m)^(?:minor(?:\([^)]+\))?:.*|feat(?:\([^)]+\))?:.*)$";
-const NOOP_REGEX_STR: &str = r"(?m)^(?:noop(?:\([^)]+\))?:.*|chore(?:\([^)]+\))?:.*)$";
+const MAJOR_REGEX_STR: &str = r"(?m)^major(\(.+\))?:.*";
+const MINOR_REGEX_STR: &str = r"(?m)^(minor|feat)(\(.+\))?:.*";
+const NOOP_REGEX_STR: &str = r"(?m)^(noop|chore)(\(.+\))?:.*";
+const BREAKING_REGEX_STR: &str = r"(?m)BREAKING CHANGE:.*";
 
 #[derive(Parser)]
 #[clap(author, version, about = "Calculate the next version based on conventional commits")]
@@ -24,6 +25,10 @@ struct Cli {
     /// Regex for commits that should not trigger a version bump
     #[clap(long, default_value = NOOP_REGEX_STR)]
     noop: String,
+
+    /// Regex for commits indicating a breaking change
+    #[clap(long, default_value = BREAKING_REGEX_STR)]
+    breaking: String,
 }
 
 struct VersionBump {
@@ -48,6 +53,7 @@ fn main() {
     log::debug!("Major bump regex: {}", cli.major);
     log::debug!("Minor bump regex: {}", cli.minor);
     log::debug!("No-op regex: {}", cli.noop);
+    log::debug!("Breaking change regex: {}", cli.breaking);
 
     let major_re = Regex::new(&cli.major).unwrap_or_else(|e| {
         log::error!("Invalid major regex '{}': {}", cli.major, e);
@@ -59,6 +65,10 @@ fn main() {
     });
     let noop_re = Regex::new(&cli.noop).unwrap_or_else(|e| {
         log::error!("Invalid noop regex '{}': {}", cli.noop, e);
+        std::process::exit(1);
+    });
+    let breaking_re = Regex::new(&cli.breaking).unwrap_or_else(|e| {
+        log::error!("Invalid breaking regex '{}': {}", cli.breaking, e);
         std::process::exit(1);
     });
 
@@ -133,7 +143,7 @@ fn main() {
     };
     log::debug!("Base commit for analysis: {}", base_commit.id());
 
-    let (bump, summary) = calculate_version_bump(&repo, &base_commit, &head, &major_re, &minor_re, &noop_re);
+    let (bump, summary) = calculate_version_bump(&repo, &base_commit, &head, &major_re, &minor_re, &noop_re, &breaking_re);
 
     log::debug!(
         "Commits pending release: {} major, {} minor, {} patch, {} noop",
@@ -191,6 +201,7 @@ fn calculate_version_bump(
     major_re: &Regex,
     minor_re: &Regex,
     noop_re: &Regex,
+    breaking_re: &Regex,
 ) -> (VersionBump, CommitSummary) {
     let mut bump = VersionBump {
         major: false,
@@ -222,7 +233,7 @@ fn calculate_version_bump(
             message.lines().next().unwrap_or("")
         );
         
-        if major_re.is_match(message) {
+        if breaking_re.is_match(message) || major_re.is_match(message) {
             bump.major = true;
             summary.major += 1;
         } else if minor_re.is_match(message) {
@@ -252,7 +263,7 @@ fn calculate_version_bump(
                 message.lines().next().unwrap_or("")
             );
 
-            if major_re.is_match(message) {
+            if breaking_re.is_match(message) || major_re.is_match(message) {
                 bump.major = true;
                 summary.major += 1;
             } else if minor_re.is_match(message) {
@@ -348,14 +359,22 @@ mod tests {
         let major_re = Regex::new(MAJOR_REGEX_STR).unwrap();
         let minor_re = Regex::new(MINOR_REGEX_STR).unwrap();
         let noop_re = Regex::new(NOOP_REGEX_STR).unwrap();
+        let breaking_re = Regex::new(BREAKING_REGEX_STR).unwrap();
 
         // Major regex tests
         assert!(major_re.is_match("major: update something"));
         assert!(major_re.is_match("major(scope): big change"));
-        assert!(major_re.is_match("BREAKING CHANGE: this is major"));
+        assert!(!major_re.is_match("BREAKING CHANGE: this is major")); // Now handled by breaking_re
         assert!(!major_re.is_match("feat: non-breaking"));
         assert!(!major_re.is_match("minor: something"));
         assert!(!major_re.is_match("chore: cleanup"));
+
+        // Breaking change regex tests
+        assert!(breaking_re.is_match("BREAKING CHANGE: this is major"));
+        assert!(breaking_re.is_match("feat: add stuff\nBREAKING CHANGE: old stuff removed"));
+        assert!(breaking_re.is_match("fix: bugfix\nBREAKING CHANGE: changed behavior"));
+        assert!(!breaking_re.is_match("feat: add stuff"));
+        assert!(!breaking_re.is_match("major: update without breaking change"));
 
         // Minor regex tests
         assert!(minor_re.is_match("minor: add feature"));
@@ -424,6 +443,7 @@ mod tests {
         let major_re = Regex::new(MAJOR_REGEX_STR).unwrap();
         let minor_re = Regex::new(MINOR_REGEX_STR).unwrap();
         let noop_re = Regex::new(NOOP_REGEX_STR).unwrap();
+        let breaking_re = Regex::new(BREAKING_REGEX_STR).unwrap();
 
         for (message, expect_major, expect_minor, expect_patch) in test_cases {
             let to_commit_id = repo
@@ -432,7 +452,7 @@ mod tests {
             let to_commit = repo.find_commit(to_commit_id).unwrap();
 
             let (bump, summary) =
-                calculate_version_bump(&repo, &base_commit, &to_commit, &major_re, &minor_re, &noop_re);
+                calculate_version_bump(&repo, &base_commit, &to_commit, &major_re, &minor_re, &noop_re, &breaking_re);
 
             assert_eq!(bump.major, expect_major, "Message: {}", message);
             assert_eq!(bump.minor, expect_minor, "Message: {}", message);
