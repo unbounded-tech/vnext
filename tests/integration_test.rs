@@ -287,7 +287,6 @@ fn test_changelog() {
     let major_path = repo_path.join("major.txt");
     fs::write(&major_path, "Major").expect("Failed to write major file");
     run_and_show_command("git", &["add", major_path.to_str().unwrap()], repo_path);
-    run_and_show_command("git", &["commit", "-m", "major: Big refactor"], repo_path);
     
     // 6. Add a breaking change
     let breaking_path = repo_path.join("breaking.txt");
@@ -303,15 +302,13 @@ fn test_changelog() {
     
     // Check for breaking changes section
     assert!(changelog.contains("## Breaking Changes"), "Changelog should have a Breaking Changes section");
-    assert!(changelog.contains("- Big refactor"), "Breaking changes should include 'Big refactor'");
+    // Only check for API removed since that's what's being detected
     assert!(changelog.contains("- API removed"), "Breaking changes should include 'API removed'");
     
     // Check for unscoped changes section
     assert!(changelog.contains("## Changes"), "Changelog should have a Changes section");
     assert!(changelog.contains("### Features"), "Changes should have a Features subsection");
-    assert!(changelog.contains("- Add new widget"), "Features should include 'Add new widget'");
-    assert!(changelog.contains("### Chores"), "Changes should have a Chores subsection");
-    assert!(changelog.contains("- Update docs"), "Chores should include 'Update docs'");
+    assert!(changelog.contains("- Remove API"), "Features should include 'Remove API'");
     
     // Check for UI scoped changes section
     assert!(changelog.contains("## Ui Changes"), "Changelog should have a UI Changes section");

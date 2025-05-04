@@ -335,21 +335,37 @@ fn process_commit_message(
     fix_re: &Regex,
     commit_pattern: &Regex,
 ) {
+    // Log the message being processed
+    log::debug!("Processing commit message: {}", message);
+    
     // Check for version bump type
     if major_re.is_match(message) {
         bump.major = true;
         summary.major += 1;
+        log::debug!("Detected major bump");
+        
+        // If it's a major commit, also add it to breaking changes
+        let first_line = message.lines().next().unwrap_or("");
+        if first_line.starts_with("major:") {
+            let content = first_line.trim_start_matches("major:").trim().to_string();
+            log::debug!("Adding major commit to breaking changes: {}", content);
+            summary.breaking_changes.push(content);
+        }
     } else if minor_re.is_match(message) {
         bump.minor = true;
         summary.minor += 1;
+        log::debug!("Detected minor bump");
     } else if fix_re.is_match(message) {
         bump.patch = true;
         summary.patch += 1;
+        log::debug!("Detected patch bump (fix)");
     } else if !noop_re.is_match(message) {
         bump.patch = true;
         summary.patch += 1;
+        log::debug!("Detected patch bump (other)");
     } else {
         summary.noop += 1;
+        log::debug!("Detected no-op commit");
     }
 
     // Process for changelog
@@ -358,6 +374,7 @@ fn process_commit_message(
         for line in message.lines() {
             if line.starts_with("BREAKING CHANGE:") {
                 let breaking_content = line.trim_start_matches("BREAKING CHANGE:").trim();
+                log::debug!("Adding BREAKING CHANGE to breaking changes: {}", breaking_content);
                 summary.breaking_changes.push(breaking_content.to_string());
             }
         }
@@ -365,11 +382,14 @@ fn process_commit_message(
 
     // Process the first line of the commit message
     let first_line = message.lines().next().unwrap_or("");
+    log::debug!("Processing first line: {}", first_line);
     
     if let Some(captures) = commit_pattern.captures(first_line) {
         // Check if it's a BREAKING CHANGE line
         if let Some(breaking_content) = captures.get(4) {
-            summary.breaking_changes.push(breaking_content.as_str().trim().to_string());
+            let content = breaking_content.as_str().trim().to_string();
+            log::debug!("Adding breaking content from regex capture: {}", content);
+            summary.breaking_changes.push(content);
             return;
         }
 
@@ -382,6 +402,9 @@ fn process_commit_message(
             let commit_type = commit_type.as_str();
             let scope_key = scope.unwrap_or("").to_string();
             let content = content.as_str().trim().to_string();
+            
+            log::debug!("Parsed commit: type={}, scope={}, content={}",
+                       commit_type, scope.unwrap_or(""), content);
 
             // Get or create the CategoryCommits for this scope
             let category = summary.scoped_commits
@@ -391,19 +414,24 @@ fn process_commit_message(
             // Add the commit message to the appropriate category
             match commit_type {
                 "major" => {
+                    log::debug!("Adding major commit to breaking changes: {}", content);
                     summary.breaking_changes.push(content);
                 }
                 "feat" | "minor" => {
+                    log::debug!("Adding feature: {}", content);
                     category.features.push(content);
                 }
                 "fix" => {
+                    log::debug!("Adding fix: {}", content);
                     category.fixes.push(content);
                 }
                 "chore" | "noop" => {
+                    log::debug!("Adding chore: {}", content);
                     category.chores.push(content);
                 }
                 _ => {
                     // Unknown commit type, treat as patch
+                    log::debug!("Adding unknown commit type as fix: {}", content);
                     category.fixes.push(content);
                 }
             }
@@ -411,6 +439,7 @@ fn process_commit_message(
     } else if first_line.starts_with("major:") {
         // Handle major: commits that don't match the pattern exactly
         let content = first_line.trim_start_matches("major:").trim().to_string();
+        log::debug!("Adding major commit (fallback) to breaking changes: {}", content);
         summary.breaking_changes.push(content);
     }
 }
