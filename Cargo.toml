@@ -18,5 +18,5 @@ openssl-sys = { version = "0.9.106", features = ["vendored"] }
 
 [dev-dependencies]
 mockall = "=0.13.1"
-tempfile = "=3.10.1"
+tempfile = "=3.19.1"
 
