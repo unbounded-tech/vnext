@@ -11,4 +11,4 @@ jobs:
   release:
     uses: harmony-labs/workflow-rust-release/.github/workflows/workflow.yaml@a042c53c336e636cada49d5d352ebe5f9b5ff452 # v2.0.2
     with:
-      executable_name: ${{ github.event.repository.name }}
+      binary_name: ${{ github.event.repository.name }}
