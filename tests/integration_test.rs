@@ -275,7 +275,7 @@ fn test_changelog() {
     run_and_show_command("git", &["status"], repo_path);
     run_and_show_command("git", &["add", file_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "fix: 2"], repo_path);
-    
+
     let version = run_vnext(repo_path);
     assert_eq!(version, "0.1.1", "Initial version should be 0.1.1");
     println!("Asserted version {} is 0.1.1", version);
@@ -301,4 +301,41 @@ fn test_changelog() {
         changelog, expected_changelog,
         "Changelog output should match expected format"
     );
+
+    let tag_name = format!("v{}", version);
+    run_and_show_command("git", &["tag", &tag_name], repo_path);
+        
+    // Add a feature with a breaking change
+    let file_path = repo_path.join("breaking.md");
+    fs::write(&file_path, "# Breaking Change").expect("Failed to write breaking change file");
+    run_and_show_command("git", &["status"], repo_path);
+    run_and_show_command("git", &["add", file_path.to_str().unwrap()], repo_path);
+    run_and_show_command("git", &["commit", "-m", "feat: add new feature\n\nBREAKING CHANGE: This removes the old API"], repo_path);
+
+    let version = run_vnext(repo_path);
+    assert_eq!(version, "1.0.0", "Initial version should be 1.0.0");
+    println!("Asserted version {} is 1.0.0", version);
+
+    println!("Running vnext with --changelog to verify changelog output");
+    let project_dir = std::env::current_dir().expect("Failed to get current directory");
+    let binary_path = project_dir.join("target/debug/vnext");
+    let output = Command::new(&binary_path)
+        .args(["--changelog"])
+        .current_dir(&repo_path)
+        .output()
+        .expect("Failed to execute vnext with --changelog");
+    
+    let changelog = String::from_utf8_lossy(&output.stdout).to_string();
+    println!("Changelog output:\n{}", changelog);
+    
+    let changelog = changelog.trim_end().to_string(); // Remove trailing newlines
+    let expected_changelog = format!(
+        "## What's changed in 1.0.0\n\n* feat: add new feature\n\nBREAKING CHANGE: This removes the old API\n\n---"
+    );
+
+    assert_eq!(
+        changelog, expected_changelog,
+        "Changelog output should match expected format"
+    );
+    
 }

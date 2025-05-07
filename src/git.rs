@@ -59,6 +59,7 @@ pub fn calculate_version_bump(
     if to.id() == base_id {
         log::debug!("Single commit repo, analyzing the commit itself");
         let message = to.message().unwrap_or("");
+        let message_str = message.to_string();
         let first_line = message.lines().next().unwrap_or("").to_string();
         log::debug!(
             "Analyzing commit: {} - {}",
@@ -69,15 +70,15 @@ pub fn calculate_version_bump(
         if breaking_re.is_match(message) || major_re.is_match(message) {
             bump.major = true;
             summary.major += 1;
-            summary.commits.push((to.id().to_string(), first_line));
+            summary.commits.push((to.id().to_string(), message_str));
         } else if minor_re.is_match(message) {
             bump.minor = true;
             summary.minor += 1;
-            summary.commits.push((to.id().to_string(), first_line));
+            summary.commits.push((to.id().to_string(), message_str));
         } else if !noop_re.is_match(message) {
             bump.patch = true;
             summary.patch += 1;
-            summary.commits.push((to.id().to_string(), first_line));
+            summary.commits.push((to.id().to_string(), message_str));
         } else {
             summary.noop += 1;
         }
@@ -93,6 +94,7 @@ pub fn calculate_version_bump(
             commit_count += 1;
 
             let message = current.message().unwrap_or("");
+            let message_str = message.to_string();
             let first_line = message.lines().next().unwrap_or("").to_string();
             log::debug!(
                 "Pending commit: {} - {}",
@@ -103,15 +105,15 @@ pub fn calculate_version_bump(
             if breaking_re.is_match(message) || major_re.is_match(message) {
                 bump.major = true;
                 summary.major += 1;
-                summary.commits.push((current.id().to_string(), first_line));
+                summary.commits.push((current.id().to_string(), message_str));
             } else if minor_re.is_match(message) {
                 bump.minor = true;
                 summary.minor += 1;
-                summary.commits.push((current.id().to_string(), first_line));
+                summary.commits.push((current.id().to_string(), message_str));
             } else if !noop_re.is_match(message) {
                 bump.patch = true;
                 summary.patch += 1;
-                summary.commits.push((current.id().to_string(), first_line));
+                summary.commits.push((current.id().to_string(), message_str));
             } else {
                 summary.noop += 1;
             }
@@ -284,7 +286,7 @@ mod tests {
                 );
                 assert_eq!(
                     summary.commits[0].1,
-                    message.lines().next().unwrap_or(""),
+                    message,
                     "Commit message mismatch for: {}",
                     message
                 );

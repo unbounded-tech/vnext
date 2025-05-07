@@ -34,7 +34,25 @@ impl CommitSummary {
             let mut commits = self.commits.clone();
             commits.reverse();
             for (_, message) in &commits {
-                changelog.push_str(&format!("* {}\n", message));
+                // Format the message to preserve newlines but add bullet point to first line
+                let mut lines = message.lines();
+                if let Some(first_line) = lines.next() {
+                    changelog.push_str(&format!("* {}\n", first_line));
+                    
+                    // Add any remaining lines with proper indentation
+                    let mut remaining_lines: Vec<&str> = lines.collect();
+                    
+                    // If there are remaining lines, add an extra newline before them
+                    if !remaining_lines.is_empty() {
+                        changelog.push('\n');
+                        
+                        for line in remaining_lines {
+                            if !line.is_empty() {
+                                changelog.push_str(&format!("{}\n", line));
+                            }
+                        }
+                    }
+                }
             }
         }
         changelog.push_str("\n---\n");
