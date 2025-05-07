@@ -19,6 +19,10 @@ pub struct Cli {
     /// Regex for commits indicating a breaking change
     #[clap(long, default_value = BREAKING_REGEX_STR)]
     pub breaking: String,
+
+    /// Output the changelog with the next version
+    #[clap(long)]
+    pub changelog: bool,
 }
 
 pub fn parse_cli() -> Cli {
