@@ -39,7 +39,11 @@ fn main() {
         Ok(repo) => repo,
         Err(e) => {
             log::debug!("No Git repository found: {}. Assuming version 0.0.0.", e);
-            println!("0.0.0");
+            if cli.changelog {
+                println!("## What's changed in 0.0.0\n\n* No changes\n\n---");
+            } else {
+                println!("0.0.0");
+            }
             std::process::exit(0);
         }
     };
@@ -52,7 +56,11 @@ fn main() {
                     "Failed to resolve HEAD to a commit: {}. Assuming version 0.0.0.",
                     e
                 );
-                println!("0.0.0");
+                if cli.changelog {
+                    println!("## What's changed in 0.0.0\n\n* No changes\n\n---");
+                } else {
+                    println!("0.0.0");
+                }
                 std::process::exit(0);
             }
         },
@@ -61,7 +69,11 @@ fn main() {
                 "Failed to get HEAD: {}. Assuming version 0.0.0.",
                 e
             );
-            println!("0.0.0");
+            if cli.changelog {
+                println!("## What's changed in 0.0.0\n\n* No changes\n\n---");
+            } else {
+                println!("0.0.0");
+            }
             std::process::exit(0);
         }
     };
@@ -120,5 +132,9 @@ fn main() {
     );
     log::debug!("Next version: {}", next_version);
 
-    println!("{}", next_version);
+    if cli.changelog {
+        println!("{}", summary.format_changelog(&next_version));
+    } else {
+        println!("{}", next_version);
+    }
 }
