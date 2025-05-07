@@ -11,6 +11,35 @@ pub struct CommitSummary {
     pub minor: u32,
     pub patch: u32,
     pub noop: u32,
+    pub commits: Vec<(String, String)>, // (commit_id, message)
+}
+
+impl CommitSummary {
+    pub fn new() -> Self {
+        CommitSummary {
+            major: 0,
+            minor: 0,
+            patch: 0,
+            noop: 0,
+            commits: Vec::new(),
+        }
+    }
+
+    pub fn format_changelog(&self, next_version: &Version) -> String {
+        let mut changelog = format!("## What's changed in {}\n\n", next_version);
+        if self.commits.is_empty() {
+            changelog.push_str("* No changes\n");
+        } else {
+            // Reverse the commits to display them in chronological order (oldest first)
+            let mut commits = self.commits.clone();
+            commits.reverse();
+            for (_, message) in &commits {
+                changelog.push_str(&format!("* {}\n", message));
+            }
+        }
+        changelog.push_str("\n---\n");
+        changelog
+    }
 }
 
 pub fn parse_version(tag: &str) -> Result<Version, semver::Error> {

@@ -45,12 +45,7 @@ pub fn calculate_version_bump(
         minor: false,
         patch: false,
     };
-    let mut summary = CommitSummary {
-        major: 0,
-        minor: 0,
-        patch: 0,
-        noop: 0,
-    };
+    let mut summary = CommitSummary::new();
     let mut commit_count = 0;
 
     let mut current = to.clone();
@@ -64,21 +59,25 @@ pub fn calculate_version_bump(
     if to.id() == base_id {
         log::debug!("Single commit repo, analyzing the commit itself");
         let message = to.message().unwrap_or("");
+        let first_line = message.lines().next().unwrap_or("").to_string();
         log::debug!(
             "Analyzing commit: {} - {}",
             to.id(),
-            message.lines().next().unwrap_or("")
+            first_line
         );
         
         if breaking_re.is_match(message) || major_re.is_match(message) {
             bump.major = true;
             summary.major += 1;
+            summary.commits.push((to.id().to_string(), first_line));
         } else if minor_re.is_match(message) {
             bump.minor = true;
             summary.minor += 1;
+            summary.commits.push((to.id().to_string(), first_line));
         } else if !noop_re.is_match(message) {
             bump.patch = true;
             summary.patch += 1;
+            summary.commits.push((to.id().to_string(), first_line));
         } else {
             summary.noop += 1;
         }
@@ -94,21 +93,25 @@ pub fn calculate_version_bump(
             commit_count += 1;
 
             let message = current.message().unwrap_or("");
+            let first_line = message.lines().next().unwrap_or("").to_string();
             log::debug!(
                 "Pending commit: {} - {}",
                 current.id(),
-                message.lines().next().unwrap_or("")
+                first_line
             );
 
             if breaking_re.is_match(message) || major_re.is_match(message) {
                 bump.major = true;
                 summary.major += 1;
+                summary.commits.push((current.id().to_string(), first_line));
             } else if minor_re.is_match(message) {
                 bump.minor = true;
                 summary.minor += 1;
+                summary.commits.push((current.id().to_string(), first_line));
             } else if !noop_re.is_match(message) {
                 bump.patch = true;
                 summary.patch += 1;
+                summary.commits.push((current.id().to_string(), first_line));
             } else {
                 summary.noop += 1;
             }
@@ -264,6 +267,34 @@ mod tests {
                 "Message: {}",
                 message
             );
+
+            // Check commits vector
+            if expect_major || expect_minor || expect_patch {
+                assert_eq!(
+                    summary.commits.len(),
+                    1,
+                    "Expected one commit message for: {}",
+                    message
+                );
+                assert_eq!(
+                    summary.commits[0].0,
+                    to_commit.id().to_string(),
+                    "Commit ID mismatch for: {}",
+                    message
+                );
+                assert_eq!(
+                    summary.commits[0].1,
+                    message.lines().next().unwrap_or(""),
+                    "Commit message mismatch for: {}",
+                    message
+                );
+            } else {
+                assert!(
+                    summary.commits.is_empty(),
+                    "Expected no commit messages for no-op: {}",
+                    message
+                );
+            }
 
             // Reset HEAD for the next test.
             repo.reference("HEAD", base_commit.id(), true, "Reset for next test")
