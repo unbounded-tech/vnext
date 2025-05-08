@@ -7,6 +7,6 @@ on:
 
 jobs:
   quality:
-    uses: harmony-labs/workflow-rust-quality/.github/workflows/workflow.yaml@46f78e2d35b0a2698af4b154100e738cd58714f2 # v1.0.2
+    uses: harmony-labs/workflows-rust/.github/workflows/quality.yaml@v0.2.1
     with:
-      lint: false
+      cargo_incremental: true
