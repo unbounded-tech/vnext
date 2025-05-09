@@ -146,19 +146,6 @@ jobs:
 ```
 This snippet shows how to use vnext to compute the next version, which you can then use to tag your repository or drive further release steps.
 
-### CI Optimization
-
-The project is configured for optimal CI performance:
-
-1. **Dependency Caching**: GitHub Actions workflows cache Rust dependencies and build artifacts to avoid recompilation.
-2. **OpenSSL Configuration**:
-   - For CI and development builds, system OpenSSL is used (faster builds)
-   - For release builds, vendored OpenSSL is used (standalone binaries)
-3. **Incremental Compilation**: Enabled by default to speed up rebuilds during development.
-4. **Optimized Integration Tests**: Tests build the binary once instead of for each test case.
-
-These optimizations significantly reduce build times in CI environments while ensuring release builds produce standalone binaries.
-
 ## Contributing
 
 Contributions are welcome! Please fork the repository and open a pull request for any enhancements, bug fixes, or new features. For major changes, open an issue first to discuss your ideas.
