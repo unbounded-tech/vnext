@@ -10,16 +10,16 @@ permissions:
 
 jobs:
   quality:
-    uses: harmony-labs/workflow-rust-quality/.github/workflows/workflow.yaml@46f78e2d35b0a2698af4b154100e738cd58714f2 # v1.0.2
+    uses: harmony-labs/workflows-rust/.github/workflows/quality.yaml@v0.2.2
     with:
-      lint: false
+      cargo_incremental: true
 
   # This uses commit logs and tags from git to determine the next version number and create a tag for the release
   # Some commits such are chore: will not trigger a version bump and tag! This is by design.
   version-and-tag:
     name: Version and Tag
     needs: quality
-    uses: harmony-labs/workflow-vnext-tag/.github/workflows/workflow.yaml@40aa11a950408310bb52d9838f03f8115eb0e741 # v1.1.0
+    uses: harmony-labs/workflow-vnext-tag/.github/workflows/workflow.yaml@v1.1.0
     secrets: inherit
     with:
       useDeployKey: true

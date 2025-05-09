@@ -4,7 +4,7 @@
 
 ## Motivation
 
-I used to rely on **semantic-release** in Node.js and was spoiled by its automation. However, semantic-release is tightly coupled to the Node ecosystem – it requires a `package.json` and brings a lot of extra overhead. I tried other tools, but none captured the simplicity I was after. That's why I built **vnext**: a lightweight, language-agnostic utility that focuses solely on reading Git commit messages and outputting the next semantic version. It follows the Unix philosophy of "do one thing well," making it perfect for CI/CD pipelines across any technology stack.
+Semantic-release is a powerful tool for automated versioning and changelog generation in the Node.js ecosystem, but it's tightly bound to Node and depends on the presence of a package.json, often introducing unnecessary overhead. While alternative tools exist, few offer the same streamlined experience. To address this gap, vnext was created—a lightweight, language-agnostic utility designed to parse Git commit messages and output the next semantic version. It adheres to the Unix philosophy of "do one thing well," making it an ideal choice for CI/CD pipelines across any tech stack.
 
 ## Features
 
@@ -59,9 +59,15 @@ Below is an enhanced explanation for the **Automated Version Calculation** featu
    ```
 2. **Build the project:**
    ```bash
+   # Standard build (uses system OpenSSL)
    cargo build --release
+   
+   # Build with vendored OpenSSL (standalone binary)
+   cargo build --release --features vendored
    ```
    The compiled binary will be located at `target/release/vnext`.
+
+   > **Note:** The `vendored` feature statically links OpenSSL, creating a standalone binary that works on systems without OpenSSL installed. This is recommended for distribution but increases build time.
 
 ## Usage
 
@@ -83,7 +89,12 @@ This will output the new semantic version, ready for use in your release pipelin
    ```bash
    git clone https://github.com/harmony-labs/vnext.git
    cd vnext
-   cargo build --release
+   
+   # For development (faster build)
+   cargo build
+   
+   # For release with vendored OpenSSL
+   cargo build --release --features vendored
    ```
 2. **Run the Tool:**
    ```bash
@@ -115,6 +126,21 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        
+      - name: Install OpenSSL
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+        
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+            
       - name: Calculate Next Version
         run: vnext
 ```
