@@ -4,7 +4,7 @@
 
 ## Motivation
 
-I used to rely on **semantic-release** in Node.js and was spoiled by its automation. However, semantic-release is tightly coupled to the Node ecosystem – it requires a `package.json` and brings a lot of extra overhead. I tried other tools, but none captured the simplicity I was after. That's why I built **vnext**: a lightweight, language-agnostic utility that focuses solely on reading Git commit messages and outputting the next semantic version. It follows the Unix philosophy of "do one thing well," making it perfect for CI/CD pipelines across any technology stack.
+Semantic-release is a powerful tool for automated versioning and changelog generation in the Node.js ecosystem, but it's tightly bound to Node and depends on the presence of a package.json, often introducing unnecessary overhead. While alternative tools exist, few offer the same streamlined experience. To address this gap, vnext was created—a lightweight, language-agnostic utility designed to parse Git commit messages and output the next semantic version. It adheres to the Unix philosophy of "do one thing well," making it an ideal choice for CI/CD pipelines across any tech stack.
 
 ## Features
 
