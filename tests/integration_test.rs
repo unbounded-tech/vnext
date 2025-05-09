@@ -26,7 +26,18 @@ fn run_and_show_command(cmd: &str, args: &[&str], dir: &Path) -> Output {
     output
 }
 
-fn run_vnext(binary_path: &Path, dir: &Path) -> String {
+fn run_vnext(dir: &Path) -> String {
+    // Build the binary first in the project directory
+    let project_dir = std::env::current_dir().expect("Failed to get current directory");
+    println!("> Building vnext binary");
+    Command::new("cargo")
+        .args(["build"])
+        .current_dir(&project_dir)
+        .output()
+        .expect("Failed to build vnext");
+    
+    // Get the path to the built binary
+    let binary_path = project_dir.join("target/debug/vnext");
     println!("> Running {} in {:?}", binary_path.display(), dir);
     
     // Run the binary in the specified directory
@@ -44,23 +55,13 @@ fn run_vnext(binary_path: &Path, dir: &Path) -> String {
 
 #[test]
 fn integration_tests() {
-    // Build the binary once
-    let project_dir = std::env::current_dir().expect("Failed to get current directory");
-    println!("> Building vnext binary");
-    Command::new("cargo")
-        .args(["build"])
-        .current_dir(&project_dir)
-        .output()
-        .expect("Failed to build vnext");
-    
-    let binary_path = project_dir.join("target/debug/vnext");
 
     // 1. Run vnext on empty directory
     print!("Running vnext in empty directory");
     let temp_dir = tempfile::tempdir().expect("Failed to create temporary directory");
     let repo_path = temp_dir.path();
     println!("Temporary directory created at: {:?}", repo_path);
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "0.0.0", "Version should be 0.0.0 on empty repo");
     println!("Asserted version {} is 0.0.0", version);
 
@@ -70,7 +71,7 @@ fn integration_tests() {
     run_and_show_command("git", &["config", "user.name", "patrickleet"], repo_path);
     run_and_show_command("git", &["config", "user.email", "pat@patscott.io"], repo_path);
 
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "0.0.0", "Version should still be 0.0.0 after git init");
     println!("Asserted version {} is still 0.0.0", version);
     
@@ -84,7 +85,7 @@ fn integration_tests() {
     run_and_show_command("git", &["add", readme_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "feat: Initial commit"], repo_path);
     
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "0.1.0", "Initial version should be 0.1.0");
     println!("Asserted version {} is 0.1.0", version);
 
@@ -101,7 +102,7 @@ fn integration_tests() {
     run_and_show_command("git", &["add", patch_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "fix: Bug fix"], repo_path);
 
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "0.1.1", "Patch version should be 0.1.1");
     println!("Asserted version {} is 0.1.1", version);
     
@@ -116,7 +117,7 @@ fn integration_tests() {
     run_and_show_command("git", &["status"], repo_path);
     run_and_show_command("git", &["add", patch_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "fix: Another bug fix"], repo_path);
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "0.1.2", "Patch version should be 0.1.2");
     println!("Asserted version {} is 0.1.2", version);
     let tag_name = format!("v{}", version);
@@ -130,7 +131,7 @@ fn integration_tests() {
     run_and_show_command("git", &["status"], repo_path);
     run_and_show_command("git", &["add", feature_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "feat: New feature"], repo_path);
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "0.2.0", "Feature version should be 0.2.0");
     println!("Asserted version {} is 0.2.0", version);
     let tag_name = format!("v{}", version);
@@ -144,7 +145,7 @@ fn integration_tests() {
     run_and_show_command("git", &["status"], repo_path);
     run_and_show_command("git", &["add", breaking_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "feat: new stuff \n\nBREAKING CHANGE: old stuff removed"], repo_path);
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "1.0.0", "Breaking change version should be 1.0.0");
     println!("Asserted version {} is 1.0.0", version);
     let tag_name = format!("v{}", version);
@@ -158,7 +159,7 @@ fn integration_tests() {
     run_and_show_command("git", &["status"], repo_path);
     run_and_show_command("git", &["add", major_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "major: v2"], repo_path);
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "2.0.0", "Major version should be 2.0.0");
     println!("Asserted version {} is 2.0.0", version);
     let tag_name = format!("v{}", version);
@@ -172,7 +173,7 @@ fn integration_tests() {
     run_and_show_command("git", &["status"], repo_path);
     run_and_show_command("git", &["add", minor_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "minor: bump"], repo_path);
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "2.1.0", "Minor version should be 2.1.0");
     println!("Asserted version {} is 2.1.0", version);
     let tag_name = format!("v{}", version);
@@ -186,7 +187,7 @@ fn integration_tests() {
     run_and_show_command("git", &["status"], repo_path);
     run_and_show_command("git", &["add", noop_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "chore: noop"], repo_path);
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "2.1.0", "Noop version should be 2.1.0");
     println!("Asserted version {} is 2.1.0", version);
 
@@ -198,7 +199,7 @@ fn integration_tests() {
     run_and_show_command("git", &["status"], repo_path);
     run_and_show_command("git", &["add", chore_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "chore: noop"], repo_path);
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "2.1.0", "Chore version should be 2.1.0");
     println!("Asserted version {} is 2.1.0", version);
 
@@ -210,7 +211,7 @@ fn integration_tests() {
     run_and_show_command("git", &["status"], repo_path);
     run_and_show_command("git", &["add", non_conventional_path.to_str().unwrap()], repo_path);
     run_and_show_command("git", &["commit", "-m", "non-conventional: bump"], repo_path);
-    let version = run_vnext(&binary_path, repo_path);
+    let version = run_vnext(repo_path);
     assert_eq!(version, "2.1.1", "Non-conventional version should be 2.1.1");
     println!("Asserted version {} is 2.1.1", version);
     
