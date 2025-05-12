@@ -81,6 +81,7 @@ pub fn calculate_version_bump(
             summary.commits.push((to.id().to_string(), message_str));
         } else {
             summary.noop += 1;
+            summary.commits.push((to.id().to_string(), message_str));
         }
         
         commit_count = 1;
@@ -116,6 +117,7 @@ pub fn calculate_version_bump(
                 summary.commits.push((current.id().to_string(), message_str));
             } else {
                 summary.noop += 1;
+                summary.commits.push((current.id().to_string(), message_str));
             }
 
             if current.parents().count() == 0 {

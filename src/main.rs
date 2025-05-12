@@ -91,22 +91,31 @@ fn main() {
         None => {
             log::debug!("No previous release tags found, starting from 0.0.0");
             let version = semver::Version::new(0, 0, 0);
-            let parents = head.parents();
-            let base_commit = if parents.count() > 0 {
-                let mut earliest = head.clone();
-                for parent in head.parents() {
-                    earliest = parent.clone(); // Traverse to the root
+            
+            // Find the initial commit in the repository
+            let mut current = head.clone();
+            let mut initial_commit = current.clone();
+            
+            // Traverse to the root commit by following the first parent chain
+            loop {
+                let parents = current.parents();
+                if parents.count() == 0 {
+                    // We've reached a commit with no parents (the initial commit)
+                    initial_commit = current;
+                    break;
                 }
-                earliest
-            } else {
-                head.clone()
-            };
-            (version, base_commit)
+                
+                // Move to the first parent and continue
+                current = current.parents().next().unwrap();
+            }
+            
+            log::debug!("Found initial commit: {}", initial_commit.id());
+            (version, initial_commit)
         }
     };
     log::debug!("Last tag or base commit: {}", last_tag_commit.id());
 
-    // Determine the base commit: use merge base with main if tag exists, otherwise earliest commit
+    // Determine the base commit: use merge base with main if tag exists, otherwise use the initial commit
     let base_commit = if git::find_latest_tag(&repo).is_some() {
         let merge_base = repo
             .merge_base(head.id(), last_tag_commit.id())
@@ -114,6 +123,7 @@ fn main() {
         repo.find_commit(merge_base)
             .expect("Failed to find merge base commit")
     } else {
+        // When no tags exist, we want to analyze all commits from the initial commit to HEAD
         last_tag_commit.clone()
     };
     log::debug!("Base commit for analysis: {}", base_commit.id());
