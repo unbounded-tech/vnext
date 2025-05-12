@@ -84,10 +84,8 @@ pub fn calculate_version_bump(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::constants::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
     use regex::Regex;
-    use tempfile;
 
     #[test]
     fn test_regex_patterns() {
