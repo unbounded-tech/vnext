@@ -26,7 +26,7 @@ impl CommitSummary {
     }
 
     pub fn format_changelog(&self, next_version: &Version) -> String {
-        let mut changelog = format!("## What's changed in {}\n\n", next_version);
+        let mut changelog = format!("### What's changed in v{}\n\n", next_version);
         if self.commits.is_empty() {
             changelog.push_str("* No changes\n");
         } else {
@@ -55,7 +55,6 @@ impl CommitSummary {
                 }
             }
         }
-        changelog.push_str("\n---\n");
         changelog
     }
 }
