@@ -10,9 +10,13 @@ permissions:
 
 jobs:
   quality:
-    uses: harmony-labs/workflows-rust/.github/workflows/quality.yaml@v0.2.2
+    uses: harmony-labs/workflows-rust/.github/workflows/quality.yaml@feat/runs-on
     with:
       cargo_incremental: true
+      runs-on: |
+        [
+          {"runs-on": "runs-on=${{ github.run_id }}", "runner": "2cpu-linux-x64", "extras": "s3-cache"}
+        ]
 
   # This uses commit logs and tags from git to determine the next version number and create a tag for the release
   # Some commits such are chore: will not trigger a version bump and tag! This is by design.
