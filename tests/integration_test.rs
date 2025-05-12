@@ -230,7 +230,7 @@ fn integration_tests() {
     
     let changelog = changelog.trim_end().to_string(); // Remove trailing newlines
     let expected_changelog = format!(
-        "## What's changed in 2.1.1\n\n* non-conventional: bump\n\n---"
+        "### What's changed in v2.1.1\n\n* non-conventional: bump"
     );
     assert_eq!(
         changelog, expected_changelog,
@@ -294,7 +294,7 @@ fn test_changelog() {
     
     let changelog = changelog.trim_end().to_string(); // Remove trailing newlines
     let expected_changelog = format!(
-        "## What's changed in 0.1.1\n\n* fix: 1\n* fix: 2\n\n---"
+        "### What's changed in v0.1.1\n\n* fix: 1\n* fix: 2"
     );
 
     assert_eq!(
@@ -330,7 +330,7 @@ fn test_changelog() {
     
     let changelog = changelog.trim_end().to_string(); // Remove trailing newlines
     let expected_changelog = format!(
-        "## What's changed in 1.0.0\n\n* feat: add new feature\n\nBREAKING CHANGE: This removes the old API\n\n---"
+        "### What's changed in v1.0.0\n\n* feat: add new feature\n\nBREAKING CHANGE: This removes the old API"
     );
 
     assert_eq!(
