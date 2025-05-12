@@ -9,24 +9,7 @@ permissions:
 
 jobs:
   release:
-    uses: harmony-labs/workflows-rust/.github/workflows/release.yaml@feat/runs-on
+    uses: harmony-labs/workflows-rust/.github/workflows/release.yaml@v1.0.0
     with:
       binary_name: ${{ github.event.repository.name }}
       build_args: "--release --features vendored"
-      runs-on: |
-        [
-          {
-            "runs-on": "runs-on=${{ github.run_id }}", 
-            "runner": "2cpu-linux-x64", 
-            "extras": "s3-cache", 
-            "target": "x86_64-unknown-freebsd"
-          },
-          {"runs-on": "ubuntu-24.04", "target": "x86_64-unknown-linux-musl"},
-          {"runs-on": "ubuntu-24.04", "target": "arm-unknown-linux-musleabi"},
-          {"runs-on": "ubuntu-24.04", "target": "i686-unknown-linux-musl"},
-          {"runs-on": "macOS-latest", "target": "x86_64-apple-darwin"},
-          {"runs-on": "macOS-latest", "target": "aarch64-apple-darwin"},
-          {"runs-on": "windows-latest", "target": "i686-pc-windows-msvc"},
-          {"runs-on": "windows-latest", "target": "aarch64-pc-windows-msvc"},
-          {"runs-on": "windows-latest", "target": "x86_64-pc-windows-msvc"}
-        ]
