@@ -2,6 +2,33 @@
 
 **vnext** is a fast Rust CLI tool that analyzes your project's Git commit history using conventional commit conventions to automatically compute your next semantic version. It streamlines release management by deciding whether to bump the major, minor, or patch version solely from commit messages, making it ideal for any project regardless of language or ecosystem.
 
+## Sequence Diagram(s)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI
+    participant Git
+    participant VersionLogic
+
+    User->>CLI: Run versioning tool
+    CLI->>Git: Check for previous release tags
+    alt Tags exist
+        CLI->>Git: Find merge base between HEAD and tag
+        Git-->>CLI: Return base commit
+    else No tags
+        CLI->>Git: Traverse first-parent chain to initial commit
+        Git-->>CLI: Return initial commit as base
+    end
+    CLI->>VersionLogic: Analyze commits since base commit
+    VersionLogic->>Git: Get commit list
+    loop For each commit
+        VersionLogic->>VersionLogic: Classify and record commit (including no-ops)
+    end
+    VersionLogic-->>CLI: Return version bump and summary
+    CLI-->>User: Output version/changelog
+```
+
 ## Motivation
 
 Semantic-release is a powerful tool for automated versioning and changelog generation in the Node.js ecosystem, but it's tightly bound to Node and depends on the presence of a package.json, often introducing unnecessary overhead. While alternative tools exist, few offer the same streamlined experience. To address this gap, vnext was created—a lightweight, language-agnostic utility designed to parse Git commit messages and output the next semantic version. It adheres to the Unix philosophy of "do one thing well," making it an ideal choice for CI/CD pipelines across any tech stack.
