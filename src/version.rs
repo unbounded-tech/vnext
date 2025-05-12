@@ -40,7 +40,7 @@ impl CommitSummary {
                     changelog.push_str(&format!("* {}\n", first_line));
                     
                     // Add any remaining lines with proper indentation
-                    let mut remaining_lines: Vec<&str> = lines.collect();
+                    let remaining_lines: Vec<&str> = lines.collect();
                     
                     // If there are remaining lines, add an extra newline before them
                     if !remaining_lines.is_empty() {

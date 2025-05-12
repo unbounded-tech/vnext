@@ -94,7 +94,7 @@ fn main() {
             
             // Find the initial commit in the repository
             let mut current = head.clone();
-            let mut initial_commit = current.clone();
+            let initial_commit;
             
             // Traverse to the root commit by following the first parent chain
             loop {

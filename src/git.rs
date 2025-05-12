@@ -293,9 +293,23 @@ mod tests {
                     message
                 );
             } else {
-                assert!(
-                    summary.commits.is_empty(),
-                    "Expected no commit messages for no-op: {}",
+                // For no-op commits, expect the commit to be in summary.commits
+                assert_eq!(
+                    summary.commits.len(),
+                    1,
+                    "Expected one commit message for no-op: {}",
+                    message
+                );
+                assert_eq!(
+                    summary.commits[0].0,
+                    to_commit.id().to_string(),
+                    "Commit ID mismatch for no-op: {}",
+                    message
+                );
+                assert_eq!(
+                    summary.commits[0].1,
+                    message,
+                    "Commit message mismatch for no-op: {}",
                     message
                 );
             }
