@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   quality:
-    uses: harmony-labs/workflows-rust/.github/workflows/quality.yaml@v1.0.0
+    uses: harmony-labs/workflows-rust/.github/workflows/quality.yaml@v1.1.0
     with:
       cargo_incremental: true
 

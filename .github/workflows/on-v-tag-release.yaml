@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   release:
-    uses: harmony-labs/workflows-rust/.github/workflows/release.yaml@v1.0.0
+    uses: harmony-labs/workflows-rust/.github/workflows/release.yaml@v1.1.0
     with:
       binary_name: ${{ github.event.repository.name }}
       build_args: "--release --features vendored"
