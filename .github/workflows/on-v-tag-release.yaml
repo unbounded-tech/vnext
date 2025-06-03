@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   release:
-    uses: unbounded-tech/workflows-rust/.github/workflows/release.yaml@v1.1.0
+    uses: unbounded-tech/workflows-rust/.github/workflows/release.yaml@v1.2.0
     with:
       binary_name: ${{ github.event.repository.name }}
       build_args: "--release --features vendored"
