@@ -3,7 +3,7 @@ VERSION=`vnext`
 V_VERSION=v$VERSION
 mkdir .tmp
 cd .tmp
-git clone git@github.com:harmony-labs/vnext.git
+git clone git@github.com:unbounded-tech/vnext.git
 cd vnext
 set-cargo-version Cargo.toml $VERSION
 git add -A

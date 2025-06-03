@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   quality:
-    uses: harmony-labs/workflows-rust/.github/workflows/quality.yaml@v1.1.0
+    uses: unbounded-tech/workflows-rust/.github/workflows/quality.yaml@v1.2.0
     with:
       cargo_incremental: true
 
@@ -20,7 +20,7 @@ jobs:
   version-and-tag:
     name: Version and Tag
     needs: quality
-    uses: harmony-labs/workflow-vnext-tag/.github/workflows/workflow.yaml@v1.6.0
+    uses: unbounded-tech/workflow-vnext-tag/.github/workflows/workflow.yaml@v1.6.0
     secrets: inherit
     with:
       useDeployKey: true

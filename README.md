@@ -74,14 +74,14 @@ Below is an enhanced explanation for the **Automated Version Calculation** featu
    ```
 2. **Install vnext with ubi:**  
    ```bash
-   ubi --project harmony-labs/vnext --in ~/.ubi/bin
+   ubi --project unbounded-tech/vnext --in ~/.ubi/bin
    ```
 
 ### Building from Source
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/harmony-labs/vnext.git
+   git clone https://github.com/unbounded-tech/vnext.git
    cd vnext
    ```
 2. **Build the project:**
@@ -114,7 +114,7 @@ This will output the new semantic version, ready for use in your release pipelin
 
 1. **Clone and Build:**
    ```bash
-   git clone https://github.com/harmony-labs/vnext.git
+   git clone https://github.com/unbounded-tech/vnext.git
    cd vnext
    
    # For development (faster build)
