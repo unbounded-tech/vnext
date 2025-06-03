@@ -6,6 +6,7 @@ cd .tmp
 git clone git@github.com:unbounded-tech/vnext.git
 cd vnext
 set-cargo-version Cargo.toml $VERSION
+vnext --changelog > CHANGELOG.md
 git add -A
 git commit -m "chore(version): $V_VERSION"
 git tag $V_VERSION
