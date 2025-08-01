@@ -128,6 +128,50 @@ vnext
 ```
 This will output the new semantic version, ready for use in your release pipelines.
 
+### Generating a Changelog
+
+To generate a changelog based on your commit history, use the `--changelog` flag:
+
+```bash
+vnext --changelog
+```
+
+This will output a formatted changelog that includes all commits since the last version tag, organized by their impact on versioning. For example:
+
+```
+### What's changed in v1.2.0
+
+* feat: add new authentication system
+* fix: resolve login issue with special characters
+* chore: update dependencies
+```
+
+The changelog includes the commit messages and preserves multi-line commit bodies with proper indentation:
+
+```
+### What's changed in v2.0.0
+
+* feat: redesign user interface
+
+  This commit completely overhauls the UI with a new design system.
+  - Improved accessibility
+  - Better mobile support
+
+* fix: resolve performance issues in data processing
+```
+
+For breaking changes, the changelog will include the breaking change notice:
+
+```
+### What's changed in v3.0.0
+
+* feat: migrate to new API
+
+  BREAKING CHANGE: This removes support for the legacy API endpoints
+```
+
+This flag is particularly useful in CI/CD pipelines to automatically generate release notes. The shared GitHub workflow at [unbounded-tech/workflow-vnext-tag](https://github.com/unbounded-tech/workflow-vnext-tag) uses this flag to generate and save a CHANGELOG.md file during the release process.
+
 ### Starting from a Specific Version
 
 If you want to start versioning from a specific version number, simply create a Git tag with that version:
