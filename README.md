@@ -31,6 +31,10 @@ sequenceDiagram
 
 ## Motivation
 
+Version management has traditionally been a manual, subjective process prone to inconsistency and human bias. Emotionless versioning—where version numbers are determined by objective rules rather than human judgment—eliminates these issues by creating a standardized, predictable release process. This approach removes debates about what constitutes a "major" or "minor" change, prevents version stagnation due to fear of incrementing major versions, and ensures version numbers accurately reflect the nature of changes.
+
+Beyond just determining version numbers, conventional commits serve a dual purpose: they communicate changes in plain English that can be automatically compiled into changelogs. These changelogs provide valuable documentation that is surfaced by dependency management tools like Renovate, allowing consuming developers to understand exactly what changes to expect with each version update. This creates a seamless information flow from commit message to version number to changelog to dependency update notification, enhancing transparency and trust throughout the development ecosystem.
+
 Semantic-release is a powerful tool for automated versioning and changelog generation in the Node.js ecosystem, but it's tightly bound to Node and depends on the presence of a package.json, often introducing unnecessary overhead. While alternative tools exist, few offer the same streamlined experience. To address this gap, vnext was created—a lightweight, language-agnostic utility designed to parse Git commit messages and output the next semantic version. It adheres to the Unix philosophy of "do one thing well," making it an ideal choice for CI/CD pipelines across any tech stack.
 
 ## Features
