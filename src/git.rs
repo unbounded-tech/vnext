@@ -104,11 +104,13 @@ mod tests {
         assert!(!major_re.is_match("chore: cleanup"));
 
         // Breaking change regex tests
-        assert!(breaking_re.is_match("BREAKING CHANGE: this is major"));
-        assert!(breaking_re.is_match("feat: add stuff\nBREAKING CHANGE: old stuff removed"));
-        assert!(breaking_re.is_match("fix: bugfix\nBREAKING CHANGE: changed behavior"));
-        assert!(!breaking_re.is_match("feat: add stuff"));
-        assert!(!breaking_re.is_match("major: update without breaking change"));
+        assert!(!breaking_re.is_match("BREAKING CHANGE: this is major")); // Should not match standalone line
+        assert!(!breaking_re.is_match("feat: add stuff\nBREAKING CHANGE: old stuff removed")); // Only one newline, not at start of body
+        assert!(!breaking_re.is_match("fix: bugfix\nBREAKING CHANGE: changed behavior")); // Only one newline, not at start of body
+        assert!(breaking_re.is_match("feat: add stuff\n\nBREAKING CHANGE: old stuff removed")); // Correct format: title, empty line, then BREAKING CHANGE
+        assert!(!breaking_re.is_match("feat: add stuff\n\nThis is body.\nBREAKING CHANGE: not first line")); // Not at start of body
+        assert!(!breaking_re.is_match("feat: add stuff")); // No breaking change
+        assert!(!breaking_re.is_match("major: update without breaking change")); // No breaking change
 
         // Minor regex tests
         assert!(minor_re.is_match("minor: add feature"));
