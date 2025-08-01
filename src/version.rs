@@ -11,7 +11,14 @@ pub struct CommitSummary {
     pub minor: u32,
     pub patch: u32,
     pub noop: u32,
-    pub commits: Vec<(String, String)>, // (commit_id, message)
+    pub commits: Vec<(String, String, Option<CommitAuthor>)>, // (commit_id, message, author)
+}
+
+#[derive(Clone, Debug)]
+pub struct CommitAuthor {
+    pub name: String,
+    pub email: String,
+    pub username: Option<String>,
 }
 
 impl CommitSummary {
@@ -33,11 +40,22 @@ impl CommitSummary {
             // Reverse the commits to display them in chronological order (oldest first)
             let mut commits = self.commits.clone();
             commits.reverse();
-            for (_, message) in &commits {
+            for (_, message, author) in &commits {
                 // Format the message to preserve newlines but add bullet point to first line
                 let mut lines = message.lines();
                 if let Some(first_line) = lines.next() {
-                    changelog.push_str(&format!("* {}\n", first_line));
+                    // Add author information if available
+                    let line_with_author = if let Some(author_info) = author {
+                        if let Some(username) = &author_info.username {
+                            format!("* {} (by @{})\n", first_line, username)
+                        } else {
+                            format!("* {} (by {})\n", first_line, author_info.name)
+                        }
+                    } else {
+                        format!("* {}\n", first_line)
+                    };
+                    
+                    changelog.push_str(&line_with_author);
                     
                     // Add any remaining lines with proper indentation
                     let remaining_lines: Vec<&str> = lines.collect();

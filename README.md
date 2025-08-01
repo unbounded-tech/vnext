@@ -150,6 +150,31 @@ This will output a formatted changelog that includes all commits since the last 
 * chore: update dependencies
 ```
 
+#### Including GitHub Contributor Information
+
+You can include GitHub contributor information in the changelog by using the `--github` flag along with `--changelog`:
+
+```bash
+vnext --changelog --github
+```
+
+This will add the GitHub username of the commit author to each entry in the changelog:
+
+```
+### What's changed in v1.2.0
+
+* feat: add new authentication system (by @johndoe)
+* fix: resolve login issue with special characters (by @janedoe)
+* chore: update dependencies (by @devuser)
+```
+
+For private repositories, you'll need to set the `GITHUB_TOKEN` environment variable with a valid GitHub personal access token:
+
+```bash
+export GITHUB_TOKEN=your_github_token
+vnext --changelog --github
+```
+
 The changelog includes the commit messages and preserves multi-line commit bodies with proper indentation:
 
 ```
