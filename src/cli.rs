@@ -1,7 +1,7 @@
 use clap::Parser;
 use crate::constants::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[clap(author, version, about = "Calculate the next version based on conventional commits")]
 pub struct Cli {
     /// Regex for commits triggering a major version bump
@@ -23,6 +23,11 @@ pub struct Cli {
     /// Output the changelog with the next version
     #[clap(long)]
     pub changelog: bool,
+
+    /// Include GitHub contributor information in the changelog
+    /// Only works when --changelog is also enabled
+    #[clap(long)]
+    pub github: bool,
 }
 
 pub fn parse_cli() -> Cli {

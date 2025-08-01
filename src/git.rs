@@ -76,7 +76,7 @@ pub fn calculate_version_bump(
             summary.noop += 1;
         }
 
-        summary.commits.push((oid.to_string(), message));
+        summary.commits.push((oid.to_string(), message, None));
     }
 
     (bump, summary)
