@@ -225,6 +225,8 @@ jobs:
       build_args: "--release --features vendored"
 ```
 
+The workflow itself uses a wrapped github action - you can find a link to that in the "Packages" section of the repo home page.
+
 ## Contributing
 
 Contributions are welcome! Please fork the repository and open a pull request for any enhancements, bug fixes, or new features. For major changes, open an issue first to discuss your ideas.
