@@ -35,10 +35,6 @@ Semantic-release is a powerful tool for automated versioning and changelog gener
 
 ## Features
 
-Below is an enhanced explanation for the **Automated Version Calculation** feature, which you can include in your README:
-
----
-
 - **Automated Version Calculation:**
    vnext scans your Git commit history (starting from the last version tag in `v*.*.*` format) and examines each commit message using predefined regular expressions. This means you can create any tag number from your current code base (e.g., `v1.2.3`) and vnext will use that as the starting point for future version calculations. It follows these rules:
 
@@ -80,7 +76,7 @@ Below is an enhanced explanation for the **Automated Version Calculation** featu
 
    This simple yet robust mechanism makes vnext ideal for integrating into CI/CD pipelines, regardless of the project's language or ecosystem.
 - **Language-Agnostic:**  
-  No Node.js, npm, or package.json required – works with any codebase.
+  No Node.js, npm, or package.json required – works with any codebase - it's all based on git.
 - **Simplicity First:**  
   Outputs just the next semantic version. Combine it with your preferred release process.
 - **Unix Philosophy:**  
@@ -175,41 +171,57 @@ vnext uses structured, colored logging similar to Cargo's output. By default, th
 export LOG_LEVEL=debug
 ```
 
-## GitHub Actions & Release Automation
+## GitHub Actions
 
-vnext is designed to integrate easily with CI/CD pipelines. For example, a GitHub Actions workflow could look like this:
-```yaml
-name: Release
+### Shared Workflow
+
+A shared github workflow can be found at [https://github.com/unbounded-tech/workflow-vnext-tag](unbounded-tech/workflow-vnext-tag).
+
+Generally, you can just use this workflow. You can then trigger a release workflow on when tags are created.
+
+Example for rust:
+
+```
 on:
   push:
     branches:
       - main
 
 jobs:
-  version:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        
-      - name: Install OpenSSL
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev
-        
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-            
-      - name: Calculate Next Version
-        run: vnext
+  quality:
+    uses: unbounded-tech/workflow-rust-quality/.github/workflows/workflow.yaml@main
+    with:
+      cargo_test_args: '--verbose'
+      lint: true
+
+  version-and-tag:
+    needs: quality
+    uses: unbounded-tech/workflow-vnext-tag/.github/workflows/workflow.yaml@main
+    secrets: inherit
+    with:
+      useDeployKey: true
+      rust: true
 ```
-This snippet shows how to use vnext to compute the next version, which you can then use to tag your repository or drive further release steps.
+
+This will create a `v*.*.*` tag, which you can use to trigger other workflows:
+
+```
+name: On Version Tagged, Build and Publish Rust Binaries
+on:
+  push:
+    tags:
+    - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    uses: unbounded-tech/workflows-rust/.github/workflows/release.yaml@v1.2.1
+    with:
+      binary_name: ${{ github.event.repository.name }}
+      build_args: "--release --features vendored"
+```
 
 ## Contributing
 
