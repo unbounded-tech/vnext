@@ -42,13 +42,23 @@ impl CommitSummary {
                     // Add any remaining lines with proper indentation
                     let remaining_lines: Vec<&str> = lines.collect();
                     
-                    // If there are remaining lines, add an extra newline before them
+                    // If there are remaining lines, add an empty line and then the indented body
                     if !remaining_lines.is_empty() {
-                        changelog.push('\n');
+                        // Skip leading empty lines
+                        let mut start_index = 0;
+                        while start_index < remaining_lines.len() && remaining_lines[start_index].is_empty() {
+                            start_index += 1;
+                        }
                         
-                        for line in remaining_lines {
-                            if !line.is_empty() {
-                                changelog.push_str(&format!("{}\n", line));
+                        if start_index < remaining_lines.len() {
+                            changelog.push('\n');
+                            
+                            for line in &remaining_lines[start_index..] {
+                                if line.is_empty() {
+                                    changelog.push('\n');
+                                } else {
+                                    changelog.push_str(&format!("  {}\n", line));
+                                }
                             }
                         }
                     }
