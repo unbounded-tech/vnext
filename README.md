@@ -179,6 +179,8 @@ A shared github workflow can be found at [https://github.com/unbounded-tech/work
 
 Generally, you can just use this workflow. You can then trigger a release workflow on when tags are created.
 
+You can check out this repo's `.github` folder for more robust examples, but here's the basics:
+
 Example for rust:
 
 ```
