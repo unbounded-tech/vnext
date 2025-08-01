@@ -2,33 +2,6 @@
 
 **vnext** is a fast Rust CLI tool that analyzes your project's Git commit history using conventional commit conventions to automatically compute your next semantic version. It streamlines release management by deciding whether to bump the major, minor, or patch version solely from commit messages, making it ideal for any project regardless of language or ecosystem.
 
-## Sequence Diagram(s)
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant CLI
-    participant Git
-    participant VersionLogic
-
-    User->>CLI: Run versioning tool
-    CLI->>Git: Check for previous release tags
-    alt Tags exist
-        CLI->>Git: Find merge base between HEAD and tag
-        Git-->>CLI: Return base commit
-    else No tags
-        CLI->>Git: Traverse first-parent chain to initial commit
-        Git-->>CLI: Return initial commit as base
-    end
-    CLI->>VersionLogic: Analyze commits since base commit
-    VersionLogic->>Git: Get commit list
-    loop For each commit
-        VersionLogic->>VersionLogic: Classify and record commit (including no-ops)
-    end
-    VersionLogic-->>CLI: Return version bump and summary
-    CLI-->>User: Output version/changelog
-```
-
 ## Motivation
 
 Version management has traditionally been a manual, subjective process prone to inconsistency and human bias. Emotionless versioning—where version numbers are determined by objective rules rather than human judgment—eliminates these issues by creating a standardized, predictable release process. This approach removes debates about what constitutes a "major" or "minor" change, prevents version stagnation due to fear of incrementing major versions, and ensures version numbers accurately reflect the nature of changes.
@@ -85,6 +58,33 @@ Semantic-release is a powerful tool for automated versioning and changelog gener
   Outputs just the next semantic version. Combine it with your preferred release process.
 - **Unix Philosophy:**  
   A small, focused tool that does one thing well.
+
+## Sequence Diagram(s)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI
+    participant Git
+    participant VersionLogic
+
+    User->>CLI: Run versioning tool
+    CLI->>Git: Check for previous release tags
+    alt Tags exist
+        CLI->>Git: Find merge base between HEAD and tag
+        Git-->>CLI: Return base commit
+    else No tags
+        CLI->>Git: Traverse first-parent chain to initial commit
+        Git-->>CLI: Return initial commit as base
+    end
+    CLI->>VersionLogic: Analyze commits since base commit
+    VersionLogic->>Git: Get commit list
+    loop For each commit
+        VersionLogic->>VersionLogic: Classify and record commit (including no-ops)
+    end
+    VersionLogic-->>CLI: Return version bump and summary
+    CLI-->>User: Output version/changelog
+```
 
 ## Installation
 
