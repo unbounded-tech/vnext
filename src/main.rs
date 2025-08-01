@@ -4,6 +4,7 @@ use regex::Regex;
 mod cli;
 mod constants;
 mod git;
+mod github;
 mod logging;
 mod version;
 
@@ -128,7 +129,7 @@ fn main() {
     };
     log::debug!("Base commit for analysis: {}", base_commit.id());
 
-    let (bump, summary) = git::calculate_version_bump(&repo, &base_commit, &head, &major_re, &minor_re, &noop_re, &breaking_re);
+    let (bump, mut summary) = git::calculate_version_bump(&repo, &base_commit, &head, &major_re, &minor_re, &noop_re, &breaking_re);
 
     log::debug!(
         "Commits pending release: {} major, {} minor, {} patch, {} noop",
@@ -141,6 +142,54 @@ fn main() {
         bump.major, bump.minor, bump.patch
     );
     log::debug!("Next version: {}", next_version);
+
+    // If GitHub flag is enabled and we're generating a changelog, fetch author information
+    if cli.changelog && cli.github {
+        log::debug!("GitHub flag enabled, fetching commit author information");
+        
+        // Get the remote URL to extract repository owner and name
+        if let Ok(remote) = repo.find_remote("origin") {
+            if let Some(url) = remote.url() {
+                if let Some((owner, name)) = github::extract_repo_info(url) {
+                    log::debug!("Found GitHub repository: {}/{}", owner, name);
+                    
+                    // Extract commit IDs from the summary
+                    let commit_ids: Vec<String> = summary.commits.iter()
+                        .map(|(id, _, _)| id.clone())
+                        .collect();
+                    
+                    // Fetch author information from GitHub API
+                    match github::fetch_commit_authors(&owner, &name, &commit_ids) {
+                        Ok(authors) => {
+                            log::debug!("Successfully fetched author information for {} commits", authors.len());
+                            
+                            // Create a map of commit IDs to authors
+                            let mut author_map = std::collections::HashMap::new();
+                            for (commit_id, author) in authors {
+                                author_map.insert(commit_id, author);
+                            }
+                            
+                            // Update the summary with author information
+                            for i in 0..summary.commits.len() {
+                                let commit_id = &summary.commits[i].0;
+                                if let Some(author) = author_map.get(commit_id) {
+                                    if let Some(author_info) = author {
+                                        log::debug!("Adding author information for commit {}: {}", commit_id, author_info.name);
+                                        summary.commits[i].2 = Some(author_info.clone());
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("Failed to fetch author information from GitHub API: {}", e);
+                        }
+                    }
+                } else {
+                    log::warn!("Could not extract repository owner and name from remote URL: {}", url);
+                }
+            }
+        }
+    }
 
     if cli.changelog {
         println!("{}", summary.format_changelog(&next_version));
