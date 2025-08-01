@@ -39,11 +39,32 @@ Below is an enhanced explanation for the **Automated Version Calculation** featu
 
 ---
 
-- **Automated Version Calculation:**  
-   vnext scans your Git commit history (starting from the last version tag) and examines each commit message using predefined regular expressions. It follows these rules:
+- **Automated Version Calculation:**
+   vnext scans your Git commit history (starting from the last version tag in `v*.*.*` format) and examines each commit message using predefined regular expressions. This means you can create any tag number from your current code base (e.g., `v1.2.3`) and vnext will use that as the starting point for future version calculations. It follows these rules:
 
    - **Major Version:**
-      If a commit message contains `BREAKING CHANGE:` (in any commit type, such as `feat:`, `fix:`, or others) or is marked as a major change (with `major:`), vnext triggers a major version bump. This resets the minor and patch numbers.
+      If a commit message is marked as a major change (with `major:`) or contains `BREAKING CHANGE:` at the start of the first line of the commit body, vnext triggers a major version bump. This resets the minor and patch numbers. Note that `BREAKING CHANGE:` must appear at the beginning of the first line of the commit body (right after the commit title and an empty line) to trigger a major version bump.
+      
+      **Example of a commit message that triggers a major version bump:**
+      ```
+      feat: add new authentication system
+      
+      BREAKING CHANGE: Users will need to re-authenticate after this update
+      ```
+      
+      **Examples that will NOT trigger a major version bump:**
+      ```
+      feat: add new feature
+      
+      This feature includes BREAKING CHANGE: in the middle of a line
+      ```
+      
+      ```
+      feat: add new feature
+      
+      This is the first line of the body.
+      BREAKING CHANGE: This is not the first line of the body
+      ```
 
    - **Minor Version:**  
       In the absence of major changes, if any commit message signals the introduction of a new feature—typically using the `feat:` prefix—vnext bumps the minor version and resets the patch number.
@@ -54,7 +75,10 @@ Below is an enhanced explanation for the **Automated Version Calculation** featu
    - **No-Ops:**  
       Some commits (such as those labeled with `chore:`, `noop:`, or other non-functional changes) are ignored in the version calculation. These commits are treated as no-ops and do not trigger any version bump.
 
-   This simple yet robust mechanism makes vnext ideal for integrating into CI/CD pipelines, regardless of the project’s language or ecosystem.
+   **Note on Manual Version Bumps:**
+   The prefixes like `major:`, `minor:`, and `noop:` are considered "escape hatches" and not technically semantic versioning based on the semantics of the changes. They're included for convenience when you need to explicitly control version bumps outside the standard conventional commit types. While they're handy tools, relying primarily on semantic commit types (`feat:`, `fix:`, etc.) and `BREAKING CHANGE:` notations is more aligned with true semantic versioning principles.
+
+   This simple yet robust mechanism makes vnext ideal for integrating into CI/CD pipelines, regardless of the project's language or ecosystem.
 - **Language-Agnostic:**  
   No Node.js, npm, or package.json required – works with any codebase.
 - **Simplicity First:**  
@@ -107,6 +131,20 @@ To compute the next version based on your Git commit history, simply run:
 vnext
 ```
 This will output the new semantic version, ready for use in your release pipelines.
+
+### Starting from a Specific Version
+
+If you want to start versioning from a specific version number, simply create a Git tag with that version:
+
+```bash
+# Tag the current commit with a specific version
+git tag v2.5.0
+
+# Future runs of vnext will use this as the starting point
+vnext  # Might output 2.5.1, 2.6.0, or 3.0.0 depending on commits since the tag
+```
+
+This allows you to initialize your versioning at any point, which is especially useful when adopting vnext in an existing project.
 
 ## Developer Guide
 
