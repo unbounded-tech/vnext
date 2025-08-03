@@ -29,10 +29,6 @@ pub struct Cli {
     #[clap(long)]
     pub github: bool,
 
-    /// Disable automatic GitHub repository detection
-    /// When set, GitHub integration will only be enabled if --github is explicitly set
-    #[clap(long)]
-    pub github_detection_disabled: bool,
 }
 
 pub fn parse_cli() -> Cli {

@@ -65,13 +65,11 @@ fn test_cli_github_flags() {
     
     assert!(cli.github, "GitHub flag should be true");
     assert!(cli.changelog, "Changelog flag should be true");
-    assert!(!cli.github_detection_disabled, "GitHub detection disabled flag should default to false");
     
-    // Test GitHub detection disabled flag
-    let args = ["vnext", "--github-detection-disabled"];
+    // Test default flags
+    let args = ["vnext"];
     let cli = vnext::cli::Cli::parse_from(args);
     
-    assert!(cli.github_detection_disabled, "GitHub detection disabled flag should be true when set");
     assert!(!cli.github, "GitHub flag should default to false");
     assert!(!cli.changelog, "Changelog flag should default to false");
 }

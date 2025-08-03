@@ -113,7 +113,7 @@ fn main() {
     }
     
     // Auto-enable GitHub flag if detection is enabled and repository is on GitHub
-    let use_github = cli.github || (!cli.github_detection_disabled && is_github_repo);
+    let use_github = cli.github || is_github_repo;
     
     // Define flags for GitLab and BitBucket (for future implementation)
     let use_gitlab = is_gitlab_repo;
