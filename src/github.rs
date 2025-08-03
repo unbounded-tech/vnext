@@ -67,35 +67,11 @@ pub fn fetch_commit_authors(
             
             results.push((commit_id.clone(), Some(author)));
         } else {
-            log::warn!("Failed to fetch commit {} from GitHub API: {}", commit_id, response.status());
+            log::debug!("Failed to fetch commit {} from GitHub API: {}", commit_id, response.status());
+            log::debug!("The probably means that {} exists in your current repository but has not been pushed to the remote.", commit_id);
             results.push((commit_id.clone(), None));
         }
     }
 
     Ok(results)
-}
-
-/// Extract repository owner and name from a git remote URL
-pub fn extract_repo_info(remote_url: &str) -> Option<(String, String)> {
-    // Handle SSH URLs like git@github.com:owner/repo.git
-    if remote_url.starts_with("git@github.com:") {
-        let path = remote_url.trim_start_matches("git@github.com:");
-        let path = path.trim_end_matches(".git");
-        let parts: Vec<&str> = path.split('/').collect();
-        if parts.len() >= 2 {
-            return Some((parts[0].to_string(), parts[1].to_string()));
-        }
-    }
-    
-    // Handle HTTPS URLs like https://github.com/owner/repo.git
-    if remote_url.contains("github.com") {
-        let url = url::Url::parse(remote_url).ok()?;
-        let path = url.path().trim_start_matches('/').trim_end_matches(".git");
-        let parts: Vec<&str> = path.split('/').collect();
-        if parts.len() >= 2 {
-            return Some((parts[0].to_string(), parts[1].to_string()));
-        }
-    }
-    
-    None
 }
