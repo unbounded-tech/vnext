@@ -68,7 +68,8 @@ pub fn fetch_commit_authors(
             
             results.push((commit_id.clone(), Some(author)));
         } else {
-            log::warn!("Failed to fetch commit {} from GitHub API: {}", commit_id, response.status());
+            log::debug!("Failed to fetch commit {} from GitHub API: {}", commit_id, response.status());
+            log::debug!("The probably means that {} exists in your current repository but has not been pushed to the remote.", commit_id);
             results.push((commit_id.clone(), None));
         }
     }
