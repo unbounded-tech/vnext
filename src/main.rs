@@ -1,5 +1,6 @@
 use git2::Repository;
 
+mod changelog;
 mod cli;
 mod git;
 mod github;
@@ -82,41 +83,14 @@ fn main() {
     log::debug!("Next version: {}", next_version);
 
     // Get repository information
-    let mut owner = String::new();
-    let mut name = String::new();
-    let mut is_github_repo = false;
-    let mut is_gitlab_repo = false;
-    let mut is_bitbucket_repo = false;
-    
-    // Check repository host
-    if let Ok(remote) = repo.find_remote("origin") {
-        if let Some(url) = remote.url() {
-            if let Some((host, repo_owner, repo_name)) = git::extract_repo_info(url) {
-                owner = repo_owner;
-                name = repo_name;
-                
-                if host == "github.com" {
-                    is_github_repo = true;
-                    log::debug!("Detected GitHub repository: {}/{}", owner, name);
-                } else if host == "gitlab.com" {
-                    is_gitlab_repo = true;
-                    log::debug!("Detected GitLab repository: {}/{}", owner, name);
-                } else if host == "bitbucket.org" {
-                    is_bitbucket_repo = true;
-                    log::debug!("Detected BitBucket repository: {}/{}", owner, name);
-                } else {
-                    log::debug!("Detected repository at {}: {}/{}", host, owner, name);
-                }
-            }
-        }
-    }
+    let repo_info = changelog::get_repo_info(&repo);
     
     // Auto-enable GitHub flag if detection is enabled and repository is on GitHub
-    let use_github = cli.github || is_github_repo;
+    let use_github = cli.github || repo_info.is_github_repo;
     
     // Define flags for GitLab and BitBucket (for future implementation)
-    let use_gitlab = is_gitlab_repo;
-    let use_bitbucket = is_bitbucket_repo;
+    let use_gitlab = repo_info.is_gitlab_repo;
+    let use_bitbucket = repo_info.is_bitbucket_repo;
     
     // Handle changelog generation with repository-specific integrations
     if cli.changelog {
@@ -129,7 +103,7 @@ fn main() {
                 .collect();
             
             // Fetch author information from GitHub API
-            match github::fetch_commit_authors(&owner, &name, &commit_ids) {
+            match github::fetch_commit_authors(&repo_info.owner, &repo_info.name, &commit_ids) {
                 Ok(authors) => {
                     log::debug!("Successfully fetched author information for {} commits", authors.len());
                     
