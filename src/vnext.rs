@@ -2,9 +2,12 @@
 
 use git2::{Commit, Repository};
 use log::debug;
+use regex::Regex;
 use semver::Version;
 
+use crate::error::VNextError;
 use crate::git;
+use crate::version::{CommitSummary};
 use crate::version;
 
 /// Find the version base (main branch, latest tag, base commit)
@@ -59,4 +62,32 @@ pub fn find_version_base<'repo, 'head>(repo: &'repo Repository, head: &'head Com
     debug!("Base commit for analysis: {}", base_commit.id());
     
     (start_version, base_commit)
+}
+
+/// Calculate the next version based on commit history
+pub fn calculate_version(
+    repo: &Repository,
+    head: &Commit,
+    major_re: &Regex,
+    minor_re: &Regex,
+    noop_re: &Regex,
+    breaking_re: &Regex,
+) -> Result<(Version, CommitSummary), VNextError> {
+    // Find the version base
+    let (start_version, base_commit) = find_version_base(repo, head);
+    
+    // Calculate version bump
+    let (bump, summary) = git::calculate_version_bump(
+        repo, &base_commit, head, major_re, minor_re, noop_re, breaking_re)?;
+    
+    // Calculate next version
+    let next_version = version::calculate_next_version(&start_version, &bump);
+    
+    log::debug!(
+        "Version bump: major={}, minor={}, patch={}",
+        bump.major, bump.minor, bump.patch
+    );
+    log::debug!("Next version: {}", next_version);
+    
+    Ok((next_version, summary))
 }
