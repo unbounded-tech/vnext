@@ -83,37 +83,28 @@ fn main() {
     log::debug!("Next version: {}", next_version);
 
     // Get repository information
-    let mut github_owner = String::new();
-    let mut github_name = String::new();
+    let mut owner = String::new();
+    let mut name = String::new();
     let mut is_github_repo = false;
-    
-    let mut gitlab_owner = String::new();
-    let mut gitlab_name = String::new();
     let mut is_gitlab_repo = false;
-    
-    let mut bitbucket_owner = String::new();
-    let mut bitbucket_name = String::new();
     let mut is_bitbucket_repo = false;
     
     // Check repository host
     if let Ok(remote) = repo.find_remote("origin") {
         if let Some(url) = remote.url() {
-            if let Some((host, owner, name)) = git::extract_repo_info(url) {
+            if let Some((host, repo_owner, repo_name)) = git::extract_repo_info(url) {
+                owner = repo_owner;
+                name = repo_name;
+                
                 if host == "github.com" {
                     is_github_repo = true;
-                    github_owner = owner;
-                    github_name = name;
-                    log::debug!("Detected GitHub repository: {}/{}", github_owner, github_name);
+                    log::debug!("Detected GitHub repository: {}/{}", owner, name);
                 } else if host == "gitlab.com" {
                     is_gitlab_repo = true;
-                    gitlab_owner = owner;
-                    gitlab_name = name;
-                    log::debug!("Detected GitLab repository: {}/{}", gitlab_owner, gitlab_name);
+                    log::debug!("Detected GitLab repository: {}/{}", owner, name);
                 } else if host == "bitbucket.org" {
                     is_bitbucket_repo = true;
-                    bitbucket_owner = owner;
-                    bitbucket_name = name;
-                    log::debug!("Detected BitBucket repository: {}/{}", bitbucket_owner, bitbucket_name);
+                    log::debug!("Detected BitBucket repository: {}/{}", owner, name);
                 } else {
                     log::debug!("Detected repository at {}: {}/{}", host, owner, name);
                 }
@@ -139,7 +130,7 @@ fn main() {
                 .collect();
             
             // Fetch author information from GitHub API
-            match github::fetch_commit_authors(&github_owner, &github_name, &commit_ids) {
+            match github::fetch_commit_authors(&owner, &name, &commit_ids) {
                 Ok(authors) => {
                     log::debug!("Successfully fetched author information for {} commits", authors.len());
                     
