@@ -19,22 +19,7 @@ fn main() {
     log::debug!("No-op regex: {}", cli.noop);
     log::debug!("Breaking change regex: {}", cli.breaking);
 
-    let major_re = Regex::new(&cli.major).unwrap_or_else(|e| {
-        log::error!("Invalid major regex '{}': {}", cli.major, e);
-        std::process::exit(1);
-    });
-    let minor_re = Regex::new(&cli.minor).unwrap_or_else(|e| {
-        log::error!("Invalid minor regex '{}': {}", cli.minor, e);
-        std::process::exit(1);
-    });
-    let noop_re = Regex::new(&cli.noop).unwrap_or_else(|e| {
-        log::error!("Invalid noop regex '{}': {}", cli.noop, e);
-        std::process::exit(1);
-    });
-    let breaking_re = Regex::new(&cli.breaking).unwrap_or_else(|e| {
-        log::error!("Invalid breaking regex '{}': {}", cli.breaking, e);
-        std::process::exit(1);
-    });
+    let (major_re, minor_re, noop_re, breaking_re) = compile_regexes(&cli);
 
     let repo = match Repository::open(".") {
         Ok(repo) => repo,
@@ -237,4 +222,26 @@ fn main() {
     } else {
         println!("{}", next_version);
     }
+}
+
+/// Compile and validate regex patterns from CLI arguments
+fn compile_regexes(cli: &cli::Cli) -> (Regex, Regex, Regex, Regex) {
+    let major_re = Regex::new(&cli.major).unwrap_or_else(|e| {
+        log::error!("Invalid major regex '{}': {}", cli.major, e);
+        std::process::exit(1);
+    });
+    let minor_re = Regex::new(&cli.minor).unwrap_or_else(|e| {
+        log::error!("Invalid minor regex '{}': {}", cli.minor, e);
+        std::process::exit(1);
+    });
+    let noop_re = Regex::new(&cli.noop).unwrap_or_else(|e| {
+        log::error!("Invalid noop regex '{}': {}", cli.noop, e);
+        std::process::exit(1);
+    });
+    let breaking_re = Regex::new(&cli.breaking).unwrap_or_else(|e| {
+        log::error!("Invalid breaking regex '{}': {}", cli.breaking, e);
+        std::process::exit(1);
+    });
+    
+    (major_re, minor_re, noop_re, breaking_re)
 }
