@@ -1,7 +1,7 @@
 //! Regex pattern compilation and validation
 
 use log::error;
-use regex::Regex;
+pub use regex::Regex;
 use std::process;
 
 use crate::cli;
