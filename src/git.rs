@@ -1,5 +1,6 @@
 use git2::{Commit, Repository};
 use regex::Regex;
+use crate::error::VNextError;
 use crate::version::{CommitSummary, VersionBump};
 use url::Url;
 
@@ -34,6 +35,18 @@ pub fn find_latest_tag(repo: &Repository) -> Option<(String, Commit)> {
     latest
 }
 
+/// Open the Git repository in the current directory
+pub fn open_repository() -> Result<Repository, VNextError> {
+    Repository::open(".").map_err(|e| e.into())
+}
+
+/// Resolve the HEAD reference to a commit
+pub fn resolve_head(repo: &Repository) -> Result<Commit, VNextError> {
+    let head_ref = repo.head()?;
+    let commit = head_ref.peel_to_commit()?;
+    Ok(commit)
+}
+
 /// Calculate how the version should bump between `from` and `to` commits.
 /// Uses a revwalk to include or exclude the base commit as appropriate.
 pub fn calculate_version_bump(
@@ -44,23 +57,23 @@ pub fn calculate_version_bump(
     minor_re: &Regex,
     noop_re: &Regex,
     breaking_re: &Regex,
-) -> (VersionBump, CommitSummary) {
+) -> Result<(VersionBump, CommitSummary), VNextError> {
     let mut bump = VersionBump { major: false, minor: false, patch: false };
     let mut summary = CommitSummary::new();
 
     // Build a revwalk starting from HEAD.
-    let mut revwalk = repo.revwalk().expect("Failed to create revwalk");
-    revwalk.push(to.id()).expect("Failed to push HEAD to revwalk");
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push(to.id())?;
 
     // If a previous tag exists, hide it so we walk only the newer commits.
     if let Some((_, tag_commit)) = find_latest_tag(repo) {
-        revwalk.hide(tag_commit.id()).expect("Failed to hide tag commit");
+        revwalk.hide(tag_commit.id())?;
     }
 
     // Iterate commits (newest first). We collect and then reverse for changelog display.
     for oid in revwalk {
-        let oid = oid.expect("Invalid OID in revwalk");
-        let commit = repo.find_commit(oid).expect("Failed to find commit");
+        let oid = oid?;
+        let commit = repo.find_commit(oid)?;
         let message = commit.message().unwrap_or("").to_string();
 
         // Decide bump level
@@ -80,7 +93,7 @@ pub fn calculate_version_bump(
         summary.commits.push((oid.to_string(), message, None));
     }
 
-    (bump, summary)
+    Ok((bump, summary))
 }
 
 /// Extract repository information from a git remote URL

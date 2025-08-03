@@ -1,5 +1,7 @@
 use git2::Repository;
 use crate::git;
+use crate::version::CommitSummary;
+use semver::Version;
 use std::string::String;
 
 /// Repository information structure
@@ -64,4 +66,26 @@ pub fn get_repo_info(repo: &Repository) -> RepoInfo {
     }
     
     repo_info
+}
+
+/// Output the result of the version calculation
+pub fn output_result(
+    next_version: &Version,
+    summary: &CommitSummary,
+    show_changelog: bool,
+) {
+    if show_changelog {
+        println!("{}", summary.format_changelog(next_version));
+    } else {
+        println!("{}", next_version);
+    }
+}
+
+/// Output a fallback result when an error occurs
+pub fn output_fallback(show_changelog: bool) {
+    if show_changelog {
+        println!("## What's changed in 0.0.0\n\n* No changes\n\n---");
+    } else {
+        println!("0.0.0");
+    }
 }

@@ -1,7 +1,9 @@
+use crate::error::VNextError;
+use crate::changelog::RepoInfo;
 use crate::version::CommitAuthor;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct GitHubCommit {
@@ -28,12 +30,53 @@ struct GitHubUser {
     html_url: String,
 }
 
+/// Enhance commit summary with GitHub author information
+pub fn enhance_with_github_info(
+    repo_info: &RepoInfo,
+    summary: &mut crate::version::CommitSummary,
+) -> Result<(), VNextError> {
+    log::debug!("GitHub integration enabled, fetching commit author information");
+    
+    // Extract commit IDs from the summary
+    let commit_ids: Vec<String> = summary.commits.iter()
+        .map(|(id, _, _)| id.clone())
+        .collect();
+    
+    // Fetch author information from GitHub API
+    match fetch_commit_authors(&repo_info.owner, &repo_info.name, &commit_ids) {
+        Ok(authors) => {
+            log::debug!("Successfully fetched author information for {} commits", authors.len());
+            
+            // Create a map of commit IDs to authors
+            let mut author_map = HashMap::new();
+            for (commit_id, author) in authors {
+                author_map.insert(commit_id, author);
+            }
+            
+            // Update the summary with author information
+            for i in 0..summary.commits.len() {
+                let commit_id = &summary.commits[i].0;
+                if let Some(author) = author_map.get(commit_id) {
+                    if let Some(author_info) = author {
+                        log::debug!("Adding author information for commit {}: {}", commit_id, author_info.name);
+                        summary.commits[i].2 = Some(author_info.clone());
+                    }
+                }
+            }
+            Ok(())
+        }
+        Err(e) => {
+            Err(VNextError::GithubError(format!("Failed to fetch author information: {}", e)))
+        }
+    }
+}
+
 /// Fetch commit author information from GitHub API
 pub fn fetch_commit_authors(
     repo_owner: &str,
     repo_name: &str,
     commit_ids: &[String],
-) -> Result<Vec<(String, Option<CommitAuthor>)>, Box<dyn Error>> {
+) -> Result<Vec<(String, Option<CommitAuthor>)>, VNextError> {
     let client = Client::new();
     let mut results = Vec::new();
 
@@ -54,10 +97,12 @@ pub fn fetch_commit_authors(
             request = request.header("Authorization", format!("token {}", token));
         }
         
-        let response = request.send()?;
+        let response = request.send()
+            .map_err(|e| VNextError::GithubError(format!("Request failed: {}", e)))?;
 
         if response.status().is_success() {
-            let commit: GitHubCommit = response.json()?;
+            let commit: GitHubCommit = response.json()
+                .map_err(|e| VNextError::GithubError(format!("Failed to parse response: {}", e)))?;
             
             let author = CommitAuthor {
                 name: commit.commit.author.name,
@@ -68,7 +113,7 @@ pub fn fetch_commit_authors(
             results.push((commit_id.clone(), Some(author)));
         } else {
             log::debug!("Failed to fetch commit {} from GitHub API: {}", commit_id, response.status());
-            log::debug!("The probably means that {} exists in your current repository but has not been pushed to the remote.", commit_id);
+            log::debug!("This probably means that {} exists in your current repository but has not been pushed to the remote.", commit_id);
             results.push((commit_id.clone(), None));
         }
     }
