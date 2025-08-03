@@ -66,3 +66,38 @@ fn test_cli_github_flag() {
     assert!(cli.github, "GitHub flag should be true");
     assert!(cli.changelog, "Changelog flag should be true");
 }
+
+#[test]
+fn test_extract_repo_info() {
+    // Test SSH URL format
+    let ssh_url = "git@github.com:owner/repo.git";
+    let result = vnext::github::extract_repo_info(ssh_url);
+    assert!(result.is_some(), "Should extract info from SSH URL");
+    if let Some((owner, name)) = result {
+        assert_eq!(owner, "owner");
+        assert_eq!(name, "repo");
+    }
+    
+    // Test HTTPS URL format
+    let https_url = "https://github.com/owner/repo.git";
+    let result = vnext::github::extract_repo_info(https_url);
+    assert!(result.is_some(), "Should extract info from HTTPS URL");
+    if let Some((owner, name)) = result {
+        assert_eq!(owner, "owner");
+        assert_eq!(name, "repo");
+    }
+    
+    // Test URL without .git suffix
+    let no_git_url = "https://github.com/owner/repo";
+    let result = vnext::github::extract_repo_info(no_git_url);
+    assert!(result.is_some(), "Should extract info from URL without .git suffix");
+    if let Some((owner, name)) = result {
+        assert_eq!(owner, "owner");
+        assert_eq!(name, "repo");
+    }
+    
+    // Test non-GitHub URL
+    let non_github_url = "https://gitlab.com/owner/repo.git";
+    let result = vnext::github::extract_repo_info(non_github_url);
+    assert!(result.is_none(), "Should not extract info from non-GitHub URL");
+}
