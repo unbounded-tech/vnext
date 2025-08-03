@@ -143,14 +143,15 @@ fn main() {
     );
     log::debug!("Next version: {}", next_version);
 
-    // Check if the repository is hosted on GitHub
-    let mut is_github_repo = false;
+    // Get repository information
     let mut github_owner = String::new();
     let mut github_name = String::new();
+    let mut is_github_repo = false;
     
+    // Check if the repository is on GitHub
     if let Ok(remote) = repo.find_remote("origin") {
         if let Some(url) = remote.url() {
-            if let Some((owner, name)) = github::extract_repo_info(url) {
+            if let Some((owner, name)) = github::is_github_repo(url) {
                 is_github_repo = true;
                 github_owner = owner;
                 github_name = name;
@@ -159,46 +160,44 @@ fn main() {
         }
     }
     
-    // If GitHub flag is enabled (manually or automatically) and we're generating a changelog, fetch author information
-    let use_github = cli.github || (cli.changelog && is_github_repo);
+    // Auto-enable GitHub flag if detection is enabled and repository is on GitHub
+    let use_github = cli.github || (!cli.github_detection_disabled && is_github_repo);
     
+    // Use GitHub integration if the flag is enabled and changelog is enabled
     if cli.changelog && use_github {
+
         log::debug!("GitHub integration enabled, fetching commit author information");
         
-        if is_github_repo {
-            // Extract commit IDs from the summary
-            let commit_ids: Vec<String> = summary.commits.iter()
-                .map(|(id, _, _)| id.clone())
-                .collect();
-            
-            // Fetch author information from GitHub API
-            match github::fetch_commit_authors(&github_owner, &github_name, &commit_ids) {
-                Ok(authors) => {
-                    log::debug!("Successfully fetched author information for {} commits", authors.len());
-                    
-                    // Create a map of commit IDs to authors
-                    let mut author_map = std::collections::HashMap::new();
-                    for (commit_id, author) in authors {
-                        author_map.insert(commit_id, author);
-                    }
-                    
-                    // Update the summary with author information
-                    for i in 0..summary.commits.len() {
-                        let commit_id = &summary.commits[i].0;
-                        if let Some(author) = author_map.get(commit_id) {
-                            if let Some(author_info) = author {
-                                log::debug!("Adding author information for commit {}: {}", commit_id, author_info.name);
-                                summary.commits[i].2 = Some(author_info.clone());
-                            }
+        // Extract commit IDs from the summary
+        let commit_ids: Vec<String> = summary.commits.iter()
+            .map(|(id, _, _)| id.clone())
+            .collect();
+        
+        // Fetch author information from GitHub API
+        match github::fetch_commit_authors(&github_owner, &github_name, &commit_ids) {
+            Ok(authors) => {
+                log::debug!("Successfully fetched author information for {} commits", authors.len());
+                
+                // Create a map of commit IDs to authors
+                let mut author_map = std::collections::HashMap::new();
+                for (commit_id, author) in authors {
+                    author_map.insert(commit_id, author);
+                }
+                
+                // Update the summary with author information
+                for i in 0..summary.commits.len() {
+                    let commit_id = &summary.commits[i].0;
+                    if let Some(author) = author_map.get(commit_id) {
+                        if let Some(author_info) = author {
+                            log::debug!("Adding author information for commit {}: {}", commit_id, author_info.name);
+                            summary.commits[i].2 = Some(author_info.clone());
                         }
                     }
                 }
-                Err(e) => {
-                    log::warn!("Failed to fetch author information from GitHub API: {}", e);
-                }
             }
-        } else {
-            log::warn!("GitHub flag is enabled but this is not a GitHub repository");
+            Err(e) => {
+                log::warn!("Failed to fetch author information from GitHub API: {}", e);
+            }
         }
     }
 

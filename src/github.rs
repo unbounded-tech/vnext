@@ -1,4 +1,5 @@
 use crate::version::CommitAuthor;
+use crate::git;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -75,25 +76,12 @@ pub fn fetch_commit_authors(
     Ok(results)
 }
 
-/// Extract repository owner and name from a git remote URL
-pub fn extract_repo_info(remote_url: &str) -> Option<(String, String)> {
-    // Handle SSH URLs like git@github.com:owner/repo.git
-    if remote_url.starts_with("git@github.com:") {
-        let path = remote_url.trim_start_matches("git@github.com:");
-        let path = path.trim_end_matches(".git");
-        let parts: Vec<&str> = path.split('/').collect();
-        if parts.len() >= 2 {
-            return Some((parts[0].to_string(), parts[1].to_string()));
-        }
-    }
-    
-    // Handle HTTPS URLs like https://github.com/owner/repo.git
-    if remote_url.contains("github.com") {
-        let url = url::Url::parse(remote_url).ok()?;
-        let path = url.path().trim_start_matches('/').trim_end_matches(".git");
-        let parts: Vec<&str> = path.split('/').collect();
-        if parts.len() >= 2 {
-            return Some((parts[0].to_string(), parts[1].to_string()));
+/// Check if a repository is hosted on GitHub and extract owner and name
+pub fn is_github_repo(remote_url: &str) -> Option<(String, String)> {
+    if let Some((host, owner, name)) = git::extract_repo_info(remote_url) {
+        // Check if the host is github.com
+        if host == "github.com" {
+            return Some((owner, name));
         }
     }
     
