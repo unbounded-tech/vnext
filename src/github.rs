@@ -76,15 +76,3 @@ pub fn fetch_commit_authors(
 
     Ok(results)
 }
-
-/// Check if a repository is hosted on GitHub and extract owner and name
-pub fn is_github_repo(remote_url: &str) -> Option<(String, String)> {
-    if let Some((host, owner, name)) = git::extract_repo_info(remote_url) {
-        // Check if the host is github.com
-        if host == "github.com" {
-            return Some((owner, name));
-        }
-    }
-    
-    None
-}

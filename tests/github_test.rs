@@ -155,20 +155,3 @@ fn test_extract_repo_info() {
         assert_eq!(name, "repo");
     }
 }
-
-#[test]
-fn test_is_github_repo() {
-    // Test GitHub URL
-    let github_url = "https://github.com/owner/repo.git";
-    let result = vnext::github::is_github_repo(github_url);
-    assert!(result.is_some(), "Should identify GitHub repository");
-    if let Some((owner, name)) = result {
-        assert_eq!(owner, "owner");
-        assert_eq!(name, "repo");
-    }
-    
-    // Test non-GitHub URL
-    let non_github_url = "https://gitlab.com/owner/repo.git";
-    let result = vnext::github::is_github_repo(non_github_url);
-    assert!(result.is_none(), "Should not identify non-GitHub repository as GitHub");
-}

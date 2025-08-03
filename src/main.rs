@@ -148,14 +148,36 @@ fn main() {
     let mut github_name = String::new();
     let mut is_github_repo = false;
     
-    // Check if the repository is on GitHub
+    let mut gitlab_owner = String::new();
+    let mut gitlab_name = String::new();
+    let mut is_gitlab_repo = false;
+    
+    let mut bitbucket_owner = String::new();
+    let mut bitbucket_name = String::new();
+    let mut is_bitbucket_repo = false;
+    
+    // Check repository host
     if let Ok(remote) = repo.find_remote("origin") {
         if let Some(url) = remote.url() {
-            if let Some((owner, name)) = github::is_github_repo(url) {
-                is_github_repo = true;
-                github_owner = owner;
-                github_name = name;
-                log::debug!("Detected GitHub repository: {}/{}", github_owner, github_name);
+            if let Some((host, owner, name)) = git::extract_repo_info(url) {
+                if host == "github.com" {
+                    is_github_repo = true;
+                    github_owner = owner;
+                    github_name = name;
+                    log::debug!("Detected GitHub repository: {}/{}", github_owner, github_name);
+                } else if host == "gitlab.com" {
+                    is_gitlab_repo = true;
+                    gitlab_owner = owner;
+                    gitlab_name = name;
+                    log::debug!("Detected GitLab repository: {}/{}", gitlab_owner, gitlab_name);
+                } else if host == "bitbucket.org" {
+                    is_bitbucket_repo = true;
+                    bitbucket_owner = owner;
+                    bitbucket_name = name;
+                    log::debug!("Detected BitBucket repository: {}/{}", bitbucket_owner, bitbucket_name);
+                } else {
+                    log::debug!("Detected repository at {}: {}/{}", host, owner, name);
+                }
             }
         }
     }
@@ -163,41 +185,50 @@ fn main() {
     // Auto-enable GitHub flag if detection is enabled and repository is on GitHub
     let use_github = cli.github || (!cli.github_detection_disabled && is_github_repo);
     
-    // Use GitHub integration if the flag is enabled and changelog is enabled
-    if cli.changelog && use_github {
-
-        log::debug!("GitHub integration enabled, fetching commit author information");
-        
-        // Extract commit IDs from the summary
-        let commit_ids: Vec<String> = summary.commits.iter()
-            .map(|(id, _, _)| id.clone())
-            .collect();
-        
-        // Fetch author information from GitHub API
-        match github::fetch_commit_authors(&github_owner, &github_name, &commit_ids) {
-            Ok(authors) => {
-                log::debug!("Successfully fetched author information for {} commits", authors.len());
-                
-                // Create a map of commit IDs to authors
-                let mut author_map = std::collections::HashMap::new();
-                for (commit_id, author) in authors {
-                    author_map.insert(commit_id, author);
-                }
-                
-                // Update the summary with author information
-                for i in 0..summary.commits.len() {
-                    let commit_id = &summary.commits[i].0;
-                    if let Some(author) = author_map.get(commit_id) {
-                        if let Some(author_info) = author {
-                            log::debug!("Adding author information for commit {}: {}", commit_id, author_info.name);
-                            summary.commits[i].2 = Some(author_info.clone());
+    // Define flags for GitLab and BitBucket (for future implementation)
+    let use_gitlab = is_gitlab_repo;
+    let use_bitbucket = is_bitbucket_repo;
+    
+    // Handle changelog generation with repository-specific integrations
+    if cli.changelog {
+        if use_github {
+            log::debug!("GitHub integration enabled, fetching commit author information");
+            
+            // Extract commit IDs from the summary
+            let commit_ids: Vec<String> = summary.commits.iter()
+                .map(|(id, _, _)| id.clone())
+                .collect();
+            
+            // Fetch author information from GitHub API
+            match github::fetch_commit_authors(&github_owner, &github_name, &commit_ids) {
+                Ok(authors) => {
+                    log::debug!("Successfully fetched author information for {} commits", authors.len());
+                    
+                    // Create a map of commit IDs to authors
+                    let mut author_map = std::collections::HashMap::new();
+                    for (commit_id, author) in authors {
+                        author_map.insert(commit_id, author);
+                    }
+                    
+                    // Update the summary with author information
+                    for i in 0..summary.commits.len() {
+                        let commit_id = &summary.commits[i].0;
+                        if let Some(author) = author_map.get(commit_id) {
+                            if let Some(author_info) = author {
+                                log::debug!("Adding author information for commit {}: {}", commit_id, author_info.name);
+                                summary.commits[i].2 = Some(author_info.clone());
+                            }
                         }
                     }
                 }
+                Err(e) => {
+                    log::warn!("Failed to fetch author information from GitHub API: {}", e);
+                }
             }
-            Err(e) => {
-                log::warn!("Failed to fetch author information from GitHub API: {}", e);
-            }
+        } else if use_gitlab {
+            log::debug!("GitLab repository detected, but GitLab integration is not implemented yet");
+        } else if use_bitbucket {
+            log::debug!("BitBucket repository detected, but BitBucket integration is not implemented yet");
         }
     }
 
