@@ -1,5 +1,5 @@
 use clap::Parser;
-use crate::constants::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
+use crate::regex::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about = "Calculate the next version based on conventional commits")]

@@ -112,7 +112,7 @@ pub fn extract_repo_info(remote_url: &str) -> Option<(String, String, String)> {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
+    use crate::regex::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
     use regex::Regex;
 
     #[test]
