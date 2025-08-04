@@ -150,27 +150,9 @@ This will output a formatted changelog that includes all commits since the last 
 * chore: update dependencies
 ```
 
-#### Including GitHub Contributor Information
+#### GitHub Contributor Information
 
-You can include GitHub contributor information in the changelog by using the `--github` flag along with `--changelog`:
-
-```bash
-vnext --changelog --github
-```
-
-**Note:** When the repository is hosted on GitHub, the `--github` flag is automatically enabled when using `--changelog`. You can control this behavior with the `--github-detection` flag:
-
-```bash
-# Disable automatic GitHub detection
-vnext --changelog --github-detection-disabled
-```
-
-You can also explicitly enable GitHub integration regardless of repository type:
-
-```bash
-# Explicitly enable GitHub integration
-vnext --changelog --github
-```
+When the repository is hosted on GitHub (detected by having a remote with "github" in the URL), GitHub contributor information is automatically included in the changelog when using `--changelog`.
 
 This will add the GitHub username of the commit author to each entry in the changelog:
 

@@ -24,11 +24,6 @@ pub struct Cli {
     #[clap(long)]
     pub changelog: bool,
 
-    /// Include GitHub contributor information in the changelog
-    /// Only works when --changelog is also enabled
-    #[clap(long)]
-    pub github: bool,
-
 }
 
 pub fn parse_cli() -> Cli {
