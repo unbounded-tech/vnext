@@ -2,6 +2,7 @@ use regex::Regex;
 
 mod changelog;
 mod cli;
+mod deploy_key;
 mod error;
 mod git;
 mod github;
@@ -37,6 +38,17 @@ fn initialize_cli() -> Result<(cli::Cli, (Regex, Regex, Regex, Regex)), VNextErr
 fn run() -> Result<(), VNextError> {
     // Initialize the application
     let (cli, regexes) = initialize_cli()?;
+    
+    // Check if a subcommand was provided
+    if let Some(command) = &cli.command {
+        match command {
+            cli::Commands::GenerateDeployKey { owner, name, key_name } => {
+                return deploy_key::generate_deploy_key(owner.clone(), name.clone(), key_name.clone());
+            }
+        }
+    }
+    
+    // If no subcommand was provided, run the default version calculation logic
     let (major_re, minor_re, noop_re, breaking_re) = regexes;
 
     // Open repository and handle errors
