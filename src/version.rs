@@ -33,7 +33,7 @@ impl CommitSummary {
         }
     }
 
-    pub fn format_changelog(&self, next_version: &Version) -> String {
+    pub fn format_changelog(&self, next_version: &Version, no_header_scaling: bool) -> String {
         let mut changelog = format!("### What's changed in v{}\n\n", next_version);
         if self.commits.is_empty() {
             changelog.push_str("* No changes\n");
@@ -76,7 +76,22 @@ impl CommitSummary {
                                 if line.is_empty() {
                                     changelog.push('\n');
                                 } else {
-                                    changelog.push_str(&format!("  {}\n", line));
+                                    let processed_line = if !no_header_scaling {
+                                        // Scale down headers in commit body (h1->h4, h2->h5, h3->h6)
+                                        if line.starts_with("# ") {
+                                            format!("#### {}", &line[2..])
+                                        } else if line.starts_with("## ") {
+                                            format!("##### {}", &line[3..])
+                                        } else if line.starts_with("### ") {
+                                            format!("###### {}", &line[4..])
+                                        } else {
+                                            line.to_string()
+                                        }
+                                    } else {
+                                        // No header scaling
+                                        line.to_string()
+                                    };
+                                    changelog.push_str(&format!("  {}\n", processed_line));
                                 }
                             }
                         }

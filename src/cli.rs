@@ -24,6 +24,10 @@ pub struct Cli {
     #[clap(long)]
     pub changelog: bool,
 
+    /// Disable header scaling in changelog (by default, h1->h4, h2->h5, h3->h6)
+    #[clap(long)]
+    pub no_header_scaling: bool,
+
     /// Subcommands
     #[clap(subcommand)]
     pub command: Option<Commands>,

@@ -73,9 +73,10 @@ pub fn output_result(
     next_version: &Version,
     summary: &CommitSummary,
     show_changelog: bool,
+    no_header_scaling: bool,
 ) {
     if show_changelog {
-        println!("{}", summary.format_changelog(next_version));
+        println!("{}", summary.format_changelog(next_version, no_header_scaling));
     } else {
         println!("{}", next_version);
     }
