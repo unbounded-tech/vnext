@@ -185,8 +185,10 @@ For private repositories, you'll need to set the `GITHUB_TOKEN` environment vari
 
 ```bash
 export GITHUB_TOKEN=your_github_token
-vnext --changelog --github
+vnext --changelog
 ```
+
+This is set automatically when using Github Actions.
 
 The changelog includes the commit messages and preserves multi-line commit bodies with proper indentation:
 
