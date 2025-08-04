@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use crate::regex::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
 
 #[derive(Parser, Debug)]
@@ -24,6 +24,27 @@ pub struct Cli {
     #[clap(long)]
     pub changelog: bool,
 
+    /// Subcommands
+    #[clap(subcommand)]
+    pub command: Option<Commands>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    /// Generate a deploy key for GitHub repository
+    GenerateDeployKey {
+        /// GitHub repository owner (e.g., unbounded-tech)
+        #[clap(long)]
+        owner: Option<String>,
+        
+        /// GitHub repository name
+        #[clap(long)]
+        name: Option<String>,
+        
+        /// Name of the deploy key
+        #[clap(long, default_value = "DEPLOY_KEY")]
+        key_name: Option<String>,
+    },
 }
 
 pub fn parse_cli() -> Cli {
