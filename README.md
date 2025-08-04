@@ -150,6 +150,23 @@ This will output a formatted changelog that includes all commits since the last 
 * chore: update dependencies
 ```
 
+#### Header Scaling in Changelogs
+
+By default, vnext automatically scales down markdown headers in commit bodies to maintain a consistent visual hierarchy in the generated changelog. This is particularly useful when the changelog is displayed in GitHub release notes, where the "What's changed" header is already an H3.
+
+The scaling works as follows:
+- H1 (#) → H4 (####)
+- H2 (##) → H5 (#####)
+- H3 (###) → H6 (######)
+
+Headers H4 and below remain unchanged.
+
+To disable header scaling and preserve the original header levels, use the `--no-header-scaling` flag:
+
+```bash
+vnext --changelog --no-header-scaling
+```
+
 #### GitHub Contributor Information
 
 When the repository is hosted on GitHub (detected by having a remote with "github" in the URL), GitHub contributor information is automatically included in the changelog when using `--changelog`.

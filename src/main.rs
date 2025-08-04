@@ -96,7 +96,7 @@ fn run() -> Result<(), VNextError> {
     }
     
     // Output result
-    changelog::output_result(&next_version, &summary, cli.changelog);
+    changelog::output_result(&next_version, &summary, cli.changelog, cli.no_header_scaling);
     
     Ok(())
 }
