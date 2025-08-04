@@ -40,7 +40,7 @@ fn test_changelog_with_author_info() {
 
     // Format the changelog
     let version = Version::new(1, 0, 0);
-    let changelog = summary.format_changelog(&version);
+    let changelog = summary.format_changelog(&version, false); // Use default header scaling
 
     // Verify the changelog contains author information
     assert!(changelog.contains("### What's changed in v1.0.0"));
@@ -104,14 +104,14 @@ fn test_github_detection_behavior() {
     ));
 
     let changelog_with_github =
-        summary_with_github.format_changelog(&semver::Version::new(1, 0, 0));
+        summary_with_github.format_changelog(&semver::Version::new(1, 0, 0), false);
     assert!(
         changelog_with_github.contains("(by @testuser)"),
         "Changelog should include GitHub username when GitHub author information is available"
     );
 
     // Test without GitHub author information
-    let changelog_without_github = summary.format_changelog(&semver::Version::new(1, 0, 0));
+    let changelog_without_github = summary.format_changelog(&semver::Version::new(1, 0, 0), false);
     assert!(!changelog_without_github.contains("(by @testuser)"),
         "Changelog should not include GitHub username when GitHub author information is not available");
 }
