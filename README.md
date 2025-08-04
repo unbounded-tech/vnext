@@ -197,6 +197,51 @@ For breaking changes, the changelog will include the breaking change notice:
 
 This flag is particularly useful in CI/CD pipelines to automatically generate release notes. The shared GitHub workflow at [unbounded-tech/workflow-vnext-tag](https://github.com/unbounded-tech/workflow-vnext-tag) uses this flag to generate and save a CHANGELOG.md file during the release process.
 
+### Generating a Deploy Key for GitHub
+
+The `generate-deploy-key` subcommand allows you to create a deploy key for a GitHub repository, which is particularly useful for CI/CD workflows:
+
+```bash
+vnext generate-deploy-key [--owner OWNER] [--name NAME] [--key-name KEY_NAME]
+```
+
+If you run this command within a GitHub repository, it will automatically detect the repository owner and name and ask if you want to use them. Otherwise, it will prompt you to enter the repository information.
+
+#### Why Deploy Keys Are Necessary
+
+When using GitHub Actions, the default `GITHUB_TOKEN` provided to workflows has a critical limitation: **it cannot trigger other workflows**. This is a security measure to prevent accidental workflow loops, but it means that if you have a workflow that creates a tag (like the vnext tagging workflow), that tag creation won't trigger any release workflows you might have set up.
+
+To overcome this limitation, you have two options:
+1. Use a Personal Access Token (PAT) with appropriate permissions - For paid organization, you can use an organization wide secret for this effectively.
+2. Use a deploy key (SSH key) specifically for this repository - especially useful for free github orgs.
+
+The `generate-deploy-key` command simplifies the second option by:
+1. Generating an Ed25519 SSH key pair
+2. Setting up the private key as a GitHub repository secret named `DEPLOY_KEY` (or a custom name you specify)
+3. Adding the public key as a deploy key to the repository
+
+#### Using with the Shared Workflow
+
+The shared workflow at [unbounded-tech/workflow-vnext-tag](https://github.com/unbounded-tech/workflow-vnext-tag) supports using deploy keys for tag creation. To use it:
+
+1. Generate a deploy key for your repository:
+   ```bash
+   vnext generate-deploy-key
+   ```
+
+2. In your workflow file, enable the deploy key option:
+   ```yaml
+   version-and-tag:
+     uses: unbounded-tech/workflow-vnext-tag/.github/workflows/workflow.yaml@main
+     secrets: inherit
+     with:
+       useDeployKey: true
+   ```
+
+This ensures that when the workflow creates a tag, it will use the deploy key instead of the default `GITHUB_TOKEN`, allowing the tag to trigger other workflows like releases.
+
+Humans do not need to know this key and secret. You can simply overwrite it with a new generated key to rotate.
+
 ### Starting from a Specific Version
 
 If you want to start versioning from a specific version number, simply create a Git tag with that version:
