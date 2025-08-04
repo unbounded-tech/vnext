@@ -73,8 +73,8 @@ fn run() -> Result<(), VNextError> {
     // Get repository information
     let repo_info = changelog::get_repo_info(&repo);
     
-    // Auto-enable GitHub flag if detection is enabled and repository is on GitHub
-    let use_github = cli.github || repo_info.is_github_repo;
+    // Use GitHub integration if repository is on GitHub
+    let use_github = repo_info.is_github_repo;
     
     // Handle GitHub integration if needed
     if cli.changelog && use_github {
