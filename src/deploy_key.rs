@@ -67,12 +67,12 @@ fn prompt_for_confirmation(prompt: &str) -> Result<bool, VNextError> {
     Ok(input == "y" || input == "yes")
 }
 
-/// Check if a deploy key with the given name already exists in the repository
-fn check_deploy_key_exists(
+/// Get the ID of a deploy key with the given name if it exists
+fn get_deploy_key_id(
     owner: &str,
     repo_name: &str,
     key_name: &str,
-) -> Result<bool, VNextError> {
+) -> Result<Option<u64>, VNextError> {
     // First try using GitHub CLI
     let list_keys_cmd = format!(
         "gh api repos/{}/{}/keys",
@@ -94,25 +94,80 @@ fn check_deploy_key_exists(
                         // Check if any key has the given title
                         for key in keys.0 {
                             if key.title == key_name {
-                                return Ok(true);
+                                return Ok(Some(key.id));
                             }
                         }
-                        Ok(false)
+                        Ok(None)
                     },
                     Err(e) => {
                         log::warn!("Failed to parse deploy keys response: {}", e);
-                        Ok(false)
+                        Ok(None)
                     }
                 }
             } else {
                 log::warn!("Failed to list deploy keys: {}", String::from_utf8_lossy(&output.stderr));
-                Ok(false)
+                Ok(None)
             }
         },
         Err(e) => {
             log::warn!("Failed to execute gh api command: {}", e);
-            Ok(false)
+            Ok(None)
         }
+    }
+}
+
+/// Delete a deploy key by ID
+fn delete_deploy_key(
+    owner: &str,
+    repo_name: &str,
+    key_id: u64,
+) -> Result<(), VNextError> {
+    info!("Deleting existing deploy key with ID: {}...", key_id);
+    
+    // Try using GitHub CLI first
+    let delete_key_cmd = format!(
+        "gh api -X DELETE repos/{}/{}/keys/{}",
+        owner,
+        repo_name,
+        key_id
+    );
+    
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(&delete_key_cmd)
+        .output();
+        
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                info!("Successfully deleted deploy key with ID: {}", key_id);
+                Ok(())
+            } else {
+                let error = String::from_utf8_lossy(&output.stderr);
+                // If we get a 404, the key might have been deleted already
+                if error.contains("404") {
+                    info!("Deploy key with ID {} not found (may have been deleted already)", key_id);
+                    Ok(())
+                } else {
+                    Err(VNextError::Other(format!("Failed to delete deploy key: {}", error)))
+                }
+            }
+        },
+        Err(e) => {
+            Err(VNextError::Other(format!("Failed to execute delete command: {}", e)))
+        }
+    }
+}
+
+/// Check if a deploy key with the given name already exists in the repository
+fn check_deploy_key_exists(
+    owner: &str,
+    repo_name: &str,
+    key_name: &str,
+) -> Result<bool, VNextError> {
+    match get_deploy_key_id(owner, repo_name, key_name)? {
+        Some(_) => Ok(true),
+        None => Ok(false)
     }
 }
 
@@ -333,6 +388,13 @@ pub fn generate_deploy_key(
     
     // Add public key as deploy key if it doesn't exist or we're overwriting
     if !deploy_key_exists || should_overwrite {
+        // If we're overwriting and the key exists, delete it first
+        if should_overwrite && deploy_key_exists {
+            if let Some(key_id) = get_deploy_key_id(&owner, &name, &key_name)? {
+                delete_deploy_key(&owner, &name, key_id)?;
+            }
+        }
+        
         info!("Adding deploy key to the repository...");
         let public_key_content = fs::read_to_string(&public_key_path)
             .map_err(|e| VNextError::Other(format!("Failed to read public key: {}", e)))?;
