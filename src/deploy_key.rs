@@ -20,6 +20,25 @@ struct DeployKeyResponse {
     read_only: bool,
 }
 
+/// Represents a list of deploy keys
+#[derive(Serialize, Deserialize, Debug)]
+struct DeployKeyList(Vec<DeployKeyResponse>);
+
+/// Represents a list of repository secrets
+#[derive(Serialize, Deserialize, Debug)]
+struct SecretList {
+    total_count: u64,
+    secrets: Vec<Secret>,
+}
+
+/// Represents a repository secret
+#[derive(Serialize, Deserialize, Debug)]
+struct Secret {
+    name: String,
+    created_at: String,
+    updated_at: String,
+}
+
 /// Prompt user for input with a default value
 fn prompt_with_default(prompt: &str, default: &str) -> Result<String, VNextError> {
     print!("{} [{}]: ", prompt, default);
@@ -48,11 +67,110 @@ fn prompt_for_confirmation(prompt: &str) -> Result<bool, VNextError> {
     Ok(input == "y" || input == "yes")
 }
 
+/// Check if a deploy key with the given name already exists in the repository
+fn check_deploy_key_exists(
+    owner: &str,
+    repo_name: &str,
+    key_name: &str,
+) -> Result<bool, VNextError> {
+    // First try using GitHub CLI
+    let list_keys_cmd = format!(
+        "gh api repos/{}/{}/keys",
+        owner,
+        repo_name
+    );
+    
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(&list_keys_cmd)
+        .output();
+        
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                match serde_json::from_str::<DeployKeyList>(&stdout) {
+                    Ok(keys) => {
+                        // Check if any key has the given title
+                        for key in keys.0 {
+                            if key.title == key_name {
+                                return Ok(true);
+                            }
+                        }
+                        Ok(false)
+                    },
+                    Err(e) => {
+                        log::warn!("Failed to parse deploy keys response: {}", e);
+                        Ok(false)
+                    }
+                }
+            } else {
+                log::warn!("Failed to list deploy keys: {}", String::from_utf8_lossy(&output.stderr));
+                Ok(false)
+            }
+        },
+        Err(e) => {
+            log::warn!("Failed to execute gh api command: {}", e);
+            Ok(false)
+        }
+    }
+}
+
+/// Check if a secret with the given name already exists in the repository
+fn check_secret_exists(
+    owner: &str,
+    repo_name: &str,
+    secret_name: &str,
+) -> Result<bool, VNextError> {
+    // Try using GitHub CLI to list secrets
+    let list_secrets_cmd = format!(
+        "gh api repos/{}/{}/actions/secrets",
+        owner,
+        repo_name
+    );
+    
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(&list_secrets_cmd)
+        .output();
+        
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                match serde_json::from_str::<SecretList>(&stdout) {
+                    Ok(secrets) => {
+                        // Check if any secret has the given name
+                        for secret in secrets.secrets {
+                            if secret.name == secret_name {
+                                return Ok(true);
+                            }
+                        }
+                        Ok(false)
+                    },
+                    Err(e) => {
+                        log::warn!("Failed to parse secrets response: {}", e);
+                        Ok(false)
+                    }
+                }
+            } else {
+                log::warn!("Failed to list secrets: {}", String::from_utf8_lossy(&output.stderr));
+                Ok(false)
+            }
+        },
+        Err(e) => {
+            log::warn!("Failed to execute gh api command: {}", e);
+            Ok(false)
+        }
+    }
+}
+
 /// Generate a deploy key for a GitHub repository
 pub fn generate_deploy_key(
     owner: Option<String>,
     name: Option<String>,
     key_name: Option<String>,
+    overwrite: bool,
 ) -> Result<(), VNextError> {
     // Try to detect current repository information
     let (detected_owner, detected_name) = match git::open_repository() {
@@ -113,6 +231,27 @@ pub fn generate_deploy_key(
     };
 
     let key_name = key_name.unwrap_or_else(|| "DEPLOY_KEY".to_string());
+    
+    // Check if both deploy key and secret already exist
+    let deploy_key_exists = check_deploy_key_exists(&owner, &name, &key_name)?;
+    let secret_exists = check_secret_exists(&owner, &name, &key_name)?;
+    
+    // Determine if we should overwrite existing keys/secrets
+    let mut should_overwrite = overwrite;
+    
+    if (deploy_key_exists || secret_exists) && !should_overwrite {
+        // If either exists and overwrite wasn't specified, ask the user
+        let prompt = format!(
+            "Deploy key or secret '{}' already exists for repository {}/{}. Overwrite?", 
+            key_name, owner, name
+        );
+        should_overwrite = prompt_for_confirmation(&prompt)?;
+        
+        if !should_overwrite {
+            info!("Skipping creation as overwrite was not confirmed.");
+            return Ok(());
+        }
+    }
 
     // Create .tmp directory if it doesn't exist
     let tmp_dir_path = Path::new(".tmp");
@@ -123,8 +262,8 @@ pub fn generate_deploy_key(
     let private_key_path = tmp_dir_path.join("deploy_key");
     let public_key_path = tmp_dir_path.join("deploy_key.pub");
 
-    // Create .tmp directory if it doesn't exist
-    if !private_key_path.exists() {
+    // Generate SSH key pair if it doesn't exist or we're overwriting
+    if !private_key_path.exists() || should_overwrite {
         // Generate SSH key pair using ssh-keygen
         info!("Generating SSH key pair...");
         let keygen_output = Command::new("ssh-keygen")
@@ -166,95 +305,104 @@ pub fn generate_deploy_key(
         info!("Using existing SSH key pair...");
     }
 
-    // Set GitHub secret with private key
-    info!("Creating repository secret {}...", key_name);
-    let secret_cmd = format!(
-        "gh secret set \"{}\" --body \"$(cat {})\" --repo \"{}/{}\" --app actions",
-        key_name,
-        private_key_path.display(),
-        owner,
-        name
-    );
-    
-    let secret_output = Command::new("sh")
-        .arg("-c")
-        .arg(&secret_cmd)
-        .output()
-        .map_err(|e| VNextError::Other(format!("Failed to execute gh secret set command: {}", e)))?;
-    
-    if !secret_output.status.success() {
-        let error = String::from_utf8_lossy(&secret_output.stderr);
-        return Err(VNextError::Other(format!("Failed to set GitHub secret: {}", error)));
-    }
-    
-    // Add public key as deploy key
-    info!("Adding deploy key to the repository...");
-    let public_key_content = fs::read_to_string(&public_key_path)
-        .map_err(|e| VNextError::Other(format!("Failed to read public key: {}", e)))?;
-    
-    // Check for GITHUB_TOKEN environment variable
-    let token = match std::env::var("GITHUB_TOKEN") {
-        Ok(t) => t,
-        Err(_) => {
-            // Use gh api command if GITHUB_TOKEN is not available
-            let deploy_key_cmd = format!(
-                "gh api repos/{}/{}/keys --field title=\"{}\" --field key=\"$(cat {})\"",
-                owner,
-                name,
-                key_name,
-                public_key_path.display()
-            );
-            
-            let deploy_key_output = Command::new("sh")
-                .arg("-c")
-                .arg(&deploy_key_cmd)
-                .output()
-                .map_err(|e| VNextError::Other(format!("Failed to execute gh api command: {}", e)))?;
-            
-            if !deploy_key_output.status.success() {
-                let error = String::from_utf8_lossy(&deploy_key_output.stderr);
-                return Err(VNextError::Other(format!("Failed to add deploy key: {}", error)));
-            }
-            
-            info!("Deploy key setup completed.");
-            
-            // Clean up
-            fs::remove_file(&private_key_path)
-                .map_err(|e| VNextError::Other(format!("Failed to remove private key: {}", e)))?;
-            
-            fs::remove_file(&public_key_path)
-                .map_err(|e| VNextError::Other(format!("Failed to remove public key: {}", e)))?;
-            
-            return Ok(());
+    // Set GitHub secret with private key if it doesn't exist or we're overwriting
+    if !secret_exists || should_overwrite {
+        info!("Creating repository secret {}...", key_name);
+        let secret_cmd = format!(
+            "gh secret set \"{}\" --body \"$(cat {})\" --repo \"{}/{}\" --app actions",
+            key_name,
+            private_key_path.display(),
+            owner,
+            name
+        );
+        
+        let secret_output = Command::new("sh")
+            .arg("-c")
+            .arg(&secret_cmd)
+            .output()
+            .map_err(|e| VNextError::Other(format!("Failed to execute gh secret set command: {}", e)))?;
+        
+        if !secret_output.status.success() {
+            let error = String::from_utf8_lossy(&secret_output.stderr);
+            return Err(VNextError::Other(format!("Failed to set GitHub secret: {}", error)));
         }
-    };
-    
-    // Use GitHub API directly if GITHUB_TOKEN is available
-    let client = Client::new();
-    let url = format!("https://api.github.com/repos/{}/{}/keys", owner, name);
-    
-    let response = client
-        .post(&url)
-        .header("Authorization", format!("token {}", token))
-        .header("User-Agent", "vnext-cli")
-        .json(&serde_json::json!({
-            "title": key_name,
-            "key": public_key_content.trim(),
-            "read_only": true
-        }))
-        .send()
-        .map_err(|e| VNextError::Other(format!("Failed to send request to GitHub API: {}", e)))?;
-    
-    if !response.status().is_success() {
-        let error = response.text().unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(VNextError::Other(format!("Failed to add deploy key: {}", error)));
+        info!("Repository secret created successfully.");
+    } else {
+        info!("Repository secret '{}' already exists. Skipping creation.", key_name);
     }
     
-    let deploy_key: DeployKeyResponse = response.json()
-        .map_err(|e| VNextError::Other(format!("Failed to parse response: {}", e)))?;
-    
-    info!("Deploy key setup completed.");
-    info!("Deploy key ID: {}", deploy_key.id);
+    // Add public key as deploy key if it doesn't exist or we're overwriting
+    if !deploy_key_exists || should_overwrite {
+        info!("Adding deploy key to the repository...");
+        let public_key_content = fs::read_to_string(&public_key_path)
+            .map_err(|e| VNextError::Other(format!("Failed to read public key: {}", e)))?;
+        
+        // Check for GITHUB_TOKEN environment variable
+        let token = match std::env::var("GITHUB_TOKEN") {
+            Ok(t) => t,
+            Err(_) => {
+                // Use gh api command if GITHUB_TOKEN is not available
+                let deploy_key_cmd = format!(
+                    "gh api repos/{}/{}/keys --field title=\"{}\" --field key=\"$(cat {})\"",
+                    owner,
+                    name,
+                    key_name,
+                    public_key_path.display()
+                );
+                
+                let deploy_key_output = Command::new("sh")
+                    .arg("-c")
+                    .arg(&deploy_key_cmd)
+                    .output()
+                    .map_err(|e| VNextError::Other(format!("Failed to execute gh api command: {}", e)))?;
+                
+                if !deploy_key_output.status.success() {
+                    let error = String::from_utf8_lossy(&deploy_key_output.stderr);
+                    return Err(VNextError::Other(format!("Failed to add deploy key: {}", error)));
+                }
+                
+                info!("Deploy key setup completed.");
+                
+                // Clean up
+                fs::remove_file(&private_key_path)
+                    .map_err(|e| VNextError::Other(format!("Failed to remove private key: {}", e)))?;
+                
+                fs::remove_file(&public_key_path)
+                    .map_err(|e| VNextError::Other(format!("Failed to remove public key: {}", e)))?;
+                
+                return Ok(());
+            }
+        };
+        
+        // Use GitHub API directly if GITHUB_TOKEN is available
+        let client = Client::new();
+        let url = format!("https://api.github.com/repos/{}/{}/keys", owner, name);
+        
+        let response = client
+            .post(&url)
+            .header("Authorization", format!("token {}", token))
+            .header("User-Agent", "vnext-cli")
+            .json(&serde_json::json!({
+                "title": key_name,
+                "key": public_key_content.trim(),
+                "read_only": true
+            }))
+            .send()
+            .map_err(|e| VNextError::Other(format!("Failed to send request to GitHub API: {}", e)))?;
+        
+        if !response.status().is_success() {
+            let error = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(VNextError::Other(format!("Failed to add deploy key: {}", error)));
+        }
+        
+        let deploy_key: DeployKeyResponse = response.json()
+            .map_err(|e| VNextError::Other(format!("Failed to parse response: {}", e)))?;
+        
+        info!("Deploy key setup completed.");
+        info!("Deploy key ID: {}", deploy_key.id);
+    } else {
+        info!("Deploy key '{}' already exists. Skipping creation.", key_name);
+    }
     
     // Clean up
     fs::remove_file(&private_key_path)

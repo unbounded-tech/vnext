@@ -42,8 +42,8 @@ fn run() -> Result<(), VNextError> {
     // Check if a subcommand was provided
     if let Some(command) = &cli.command {
         match command {
-            cli::Commands::GenerateDeployKey { owner, name, key_name } => {
-                return deploy_key::generate_deploy_key(owner.clone(), name.clone(), key_name.clone());
+            cli::Commands::GenerateDeployKey { owner, name, key_name, overwrite } => {
+                return deploy_key::generate_deploy_key(owner.clone(), name.clone(), key_name.clone(), *overwrite);
             }
         }
     }
