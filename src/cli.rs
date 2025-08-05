@@ -48,6 +48,10 @@ pub enum Commands {
         /// Name of the deploy key
         #[clap(long, default_value = "DEPLOY_KEY")]
         key_name: Option<String>,
+        
+        /// Overwrite existing deploy key and secret if they exist
+        #[clap(long)]
+        overwrite: bool,
     },
 }
 
