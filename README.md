@@ -221,10 +221,19 @@ This flag is particularly useful in CI/CD pipelines to automatically generate re
 The `generate-deploy-key` subcommand allows you to create a deploy key for a GitHub repository, which is particularly useful for CI/CD workflows:
 
 ```bash
-vnext generate-deploy-key [--owner OWNER] [--name NAME] [--key-name KEY_NAME]
+vnext generate-deploy-key [--owner OWNER] [--name NAME] [--key-name KEY_NAME] [--overwrite]
 ```
 
 If you run this command within a GitHub repository, it will automatically detect the repository owner and name and ask if you want to use them. Otherwise, it will prompt you to enter the repository information.
+
+#### Deploy Key and Secret Management
+
+The command checks if a deploy key or secret already exists before creating new ones:
+
+- If neither exists, it creates both the deploy key and secret
+- If either exists and `--overwrite` is not specified, it prompts for confirmation
+- If either exists and `--overwrite` is specified, it replaces them without prompting
+- If both exist and `--overwrite` is not specified or denied, it skips creation
 
 #### Why Deploy Keys Are Necessary
 
@@ -259,7 +268,14 @@ The shared workflow at [unbounded-tech/workflow-vnext-tag](https://github.com/un
 
 This ensures that when the workflow creates a tag, it will use the deploy key instead of the default `GITHUB_TOKEN`, allowing the tag to trigger other workflows like releases.
 
-Humans do not need to know this key and secret. You can simply overwrite it with a new generated key to rotate.
+Humans do not need to know this key and secret. You can simply rotate the key by using the `--overwrite` flag:
+
+```bash
+# Rotate the deploy key by generating a new one
+vnext generate-deploy-key --overwrite
+```
+
+This will replace the existing key and secret with a new pair, which is useful for security best practices that recommend periodic key rotation.
 
 ### Starting from a Specific Version
 
