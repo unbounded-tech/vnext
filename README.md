@@ -101,6 +101,14 @@ sequenceDiagram
    ubi --project unbounded-tech/vnext --in ~/.ubi/bin
    ```
 
+Install a specific version:
+
+```bash
+ubi --project unbounded-tech/vnext --tag vx.x.x --in /usr/local/bin/
+```
+
+See "Releases" for available versions and changenotes.
+
 ### Building from Source
 
 1. **Clone the repository:**
