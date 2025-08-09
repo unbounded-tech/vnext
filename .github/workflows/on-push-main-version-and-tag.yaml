@@ -19,7 +19,8 @@ jobs:
   # Some commits such are chore: will not trigger a version bump and tag! This is by design.
   version-and-tag:
     name: Version and Tag
-    uses: unbounded-tech/workflow-vnext-tag/.github/workflows/v2.yaml@feat/v2
+    needs: quality
+    uses: unbounded-tech/workflow-vnext-tag/.github/workflows/workflow.yaml@feat/v2
     secrets: inherit
     with:
       useDeployKey: true
