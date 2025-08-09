@@ -28,6 +28,10 @@ pub struct Cli {
     #[clap(long)]
     pub no_header_scaling: bool,
 
+    /// Output the current version that vnext is bumping from
+    #[clap(long)]
+    pub current: bool,
+
     /// Subcommands
     #[clap(subcommand)]
     pub command: Option<Commands>,

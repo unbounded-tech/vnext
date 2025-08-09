@@ -132,6 +132,16 @@ vnext
 ```
 This will output the new semantic version, ready for use in your release pipelines.
 
+### Getting the Current Version
+
+To get the current version that vnext is bumping from, use the `--current` flag:
+
+```bash
+vnext --current
+```
+
+This will output the current version (the version of the latest tag, or 0.0.0 if no tags exist).
+
 ### Generating a Changelog
 
 To generate a changelog based on your commit history, use the `--changelog` flag:
