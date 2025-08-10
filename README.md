@@ -344,7 +344,7 @@ export LOG_LEVEL=debug
 
 #### Set up deploy key
 
-Get an authorization token using `gh` with extended permissions for managing keys:
+Get a local, temporary authorization token using `gh` with extended permissions for managing keys:
 
 ```
 gh auth refresh -h github.com -s admin:public_key -s admin:ssh_signing_key
