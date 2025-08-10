@@ -340,7 +340,19 @@ export LOG_LEVEL=debug
 
 ## GitHub Actions
 
-### Shared Workflow
+### Shared Workflow w/ Deploy Key
+
+#### Set up deploy key
+
+First, set up a deploy key for the repo you want to use vnext with:
+
+```
+vnext generate-deploy-key [--owner OWNER] [--name NAME]
+```
+
+If the deploy key doesn't exist, a new release won't be triggered by the tag created. If you are here because of this, delete the tag, and re-run the pipeline after setting up the deploy key.
+
+#### Add shared workflow
 
 A shared github workflow can be found at [https://github.com/unbounded-tech/workflow-vnext-tag](unbounded-tech/workflow-vnext-tag).
 
