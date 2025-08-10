@@ -344,7 +344,14 @@ export LOG_LEVEL=debug
 
 #### Set up deploy key
 
-First, set up a deploy key for the repo you want to use vnext with:
+Get an authorization token using `gh` with extended permissions for managing keys:
+
+```
+gh auth refresh -h github.com -s admin:public_key -s admin:ssh_signing_key
+export GITHUB_TOKEN=$(gh auth token)
+```
+
+Then, set up the deploy key and secret for the repo you want to use vnext with:
 
 ```
 vnext generate-deploy-key [--owner OWNER] [--name NAME]
