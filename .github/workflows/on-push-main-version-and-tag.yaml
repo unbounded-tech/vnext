@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   quality:
-    uses: unbounded-tech/workflows-rust/.github/workflows/quality.yaml@v1.2.6
+    uses: unbounded-tech/workflows-rust/.github/workflows/quality.yaml@v1.3.0
     with:
       cargo_incremental: true
 
