@@ -73,8 +73,8 @@ fn run() -> Result<(), VNextError> {
     log::debug!("HEAD commit: {}", head.id());
 
     // If --current flag is set, output the current version and return early
+    let (current_version, _) = vnext::find_version_base(&repo, &head);
     if cli.current {
-        let (current_version, _) = vnext::find_version_base(&repo, &head);
         println!("{}", current_version);
         return Ok(());
     }
@@ -103,7 +103,7 @@ fn run() -> Result<(), VNextError> {
     }
     
     // Output result
-    changelog::output_result(&next_version, &summary, cli.changelog, cli.no_header_scaling);
+    changelog::output_result(&next_version, &summary, cli.changelog, cli.no_header_scaling, &current_version, &repo_info);
     
     Ok(())
 }

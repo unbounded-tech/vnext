@@ -1,4 +1,5 @@
 use semver::{BuildMetadata, Prerelease, Version};
+use crate::changelog::RepoInfo;
 
 pub struct VersionBump {
     pub major: bool,
@@ -33,7 +34,7 @@ impl CommitSummary {
         }
     }
 
-    pub fn format_changelog(&self, next_version: &Version, no_header_scaling: bool) -> String {
+    pub fn format_changelog(&self, next_version: &Version, no_header_scaling: bool, current_version: &Version, repo_info: &RepoInfo) -> String {
         let mut changelog = format!("### What's changed in v{}\n\n", next_version);
         if self.commits.is_empty() {
             changelog.push_str("* No changes\n");
@@ -99,6 +100,14 @@ impl CommitSummary {
                 }
             }
         }
+        
+        // Add comparison link if it's a GitHub repository and current version is not 0.0.0
+        if repo_info.is_github_repo && (current_version.major > 0 || current_version.minor > 0 || current_version.patch > 0) {
+            changelog.push_str("\n\n");
+            changelog.push_str(&format!("See full diff: [v{}...v{}](https://github.com/{}/{}/compare/v{}...v{})",
+                current_version, next_version, repo_info.owner, repo_info.name, current_version, next_version));
+        }
+        
         changelog
     }
 }
