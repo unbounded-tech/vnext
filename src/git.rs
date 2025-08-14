@@ -1,7 +1,5 @@
 use git2::{Commit, Repository};
-use regex::Regex;
 use crate::error::VNextError;
-use crate::version::{CommitSummary, VersionBump};
 use url::Url;
 
 /// Find the main branch ("main" or "master").
@@ -45,55 +43,6 @@ pub fn resolve_head(repo: &Repository) -> Result<Commit, VNextError> {
     let head_ref = repo.head()?;
     let commit = head_ref.peel_to_commit()?;
     Ok(commit)
-}
-
-/// Calculate how the version should bump between `from` and `to` commits.
-/// Uses a revwalk to include or exclude the base commit as appropriate.
-pub fn calculate_version_bump(
-    repo: &Repository,
-    _from: &Commit,
-    to: &Commit,
-    major_re: &Regex,
-    minor_re: &Regex,
-    noop_re: &Regex,
-    breaking_re: &Regex,
-) -> Result<(VersionBump, CommitSummary), VNextError> {
-    let mut bump = VersionBump { major: false, minor: false, patch: false };
-    let mut summary = CommitSummary::new();
-
-    // Build a revwalk starting from HEAD.
-    let mut revwalk = repo.revwalk()?;
-    revwalk.push(to.id())?;
-
-    // If a previous tag exists, hide it so we walk only the newer commits.
-    if let Some((_, tag_commit)) = find_latest_tag(repo) {
-        revwalk.hide(tag_commit.id())?;
-    }
-
-    // Iterate commits (newest first). We collect and then reverse for changelog display.
-    for oid in revwalk {
-        let oid = oid?;
-        let commit = repo.find_commit(oid)?;
-        let message = commit.message().unwrap_or("").to_string();
-
-        // Decide bump level
-        if breaking_re.is_match(&message) || major_re.is_match(&message) {
-            bump.major = true;
-            summary.major += 1;
-        } else if minor_re.is_match(&message) {
-            bump.minor = true;
-            summary.minor += 1;
-        } else if !noop_re.is_match(&message) {
-            bump.patch = true;
-            summary.patch += 1;
-        } else {
-            summary.noop += 1;
-        }
-
-        summary.commits.push((oid.to_string(), message, None));
-    }
-
-    Ok((bump, summary))
 }
 
 /// Extract repository information from a git remote URL
