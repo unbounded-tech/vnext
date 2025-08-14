@@ -43,7 +43,7 @@ fn test_changelog_with_author_info() {
     let version = Version::new(1, 0, 0);
     let current_version = Version::new(0, 9, 0);
     let repo_info = RepoInfo::new(); // Empty repo info for tests
-    let changelog = summary.format_changelog(&version, false, &current_version, &repo_info); // Use default header scaling
+    let changelog = vnext::changelog::format_changelog(&summary, &version, false, &current_version, &repo_info); // Use default header scaling
 
     // Verify the changelog contains author information
     assert!(changelog.contains("### What's changed in v1.0.0"));
@@ -109,7 +109,7 @@ fn test_github_detection_behavior() {
     let current_version = Version::new(0, 9, 0);
     let repo_info = RepoInfo::new(); // Empty repo info for tests
     let changelog_with_github =
-        summary_with_github.format_changelog(&semver::Version::new(1, 0, 0), false, &current_version, &repo_info);
+        vnext::changelog::format_changelog(&summary_with_github, &semver::Version::new(1, 0, 0), false, &current_version, &repo_info);
     assert!(
         changelog_with_github.contains("(by @testuser)"),
         "Changelog should include GitHub username when GitHub author information is available"
@@ -118,7 +118,7 @@ fn test_github_detection_behavior() {
     // Test without GitHub author information
     let current_version = Version::new(0, 9, 0);
     let repo_info = RepoInfo::new(); // Empty repo info for tests
-    let changelog_without_github = summary.format_changelog(&semver::Version::new(1, 0, 0), false, &current_version, &repo_info);
+    let changelog_without_github = vnext::changelog::format_changelog(&summary, &semver::Version::new(1, 0, 0), false, &current_version, &repo_info);
     assert!(!changelog_without_github.contains("(by @testuser)"),
         "Changelog should not include GitHub username when GitHub author information is not available");
 }

@@ -15,7 +15,7 @@ pub use models::repo::RepoInfo;
 pub use services::git::{extract_repo_info, find_latest_tag, find_main_branch, open_repository, resolve_head, get_repo_info};
 pub use services::github::enhance_with_github_info;
 pub use services::version::{calculate_next_version, calculate_version_bump, parse_version, calculate_version};
-pub use services::changelog::{output_result, output_fallback};
+pub use services::changelog::{output_result, output_fallback, format_changelog};
 pub use utils::regex::{compile_regexes, BREAKING_REGEX_STR, MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR};
 
 // Re-export for backward compatibility with tests
@@ -32,7 +32,7 @@ pub mod git {
 pub mod changelog {
     pub use crate::models::repo::RepoInfo;
     pub use crate::services::git::get_repo_info;
-    pub use crate::services::changelog::{output_result, output_fallback};
+    pub use crate::services::changelog::{output_result, output_fallback, format_changelog};
 }
 
 pub mod github {

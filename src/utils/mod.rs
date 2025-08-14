@@ -5,7 +5,6 @@
 
 pub mod logging;
 pub mod regex;
-pub mod git;
 
 // Re-export commonly used functions
 pub use logging::init_logging;
