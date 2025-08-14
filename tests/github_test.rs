@@ -1,12 +1,12 @@
 use clap::Parser;
 use semver::Version;
-use vnext::version::{CommitAuthor, CommitSummary};
+use vnext::version::{CommitAuthor, ChangesetSummary};
 use vnext::changelog::RepoInfo;
 
 #[test]
 fn test_changelog_with_author_info() {
-    // Create a CommitSummary with author information
-    let mut summary = CommitSummary::new();
+    // Create a ChangesetSummary with author information
+    let mut summary = ChangesetSummary::new();
 
     // Add a commit with author information
     let author1 = CommitAuthor {
@@ -83,10 +83,10 @@ fn test_cli_changelog_flag() {
 
 #[test]
 fn test_github_detection_behavior() {
-    use vnext::version::{CommitAuthor, CommitSummary};
+    use vnext::version::{CommitAuthor, ChangesetSummary};
 
     // Create a test summary with commits
-    let mut summary = CommitSummary::new();
+    let mut summary = ChangesetSummary::new();
     summary
         .commits
         .push(("abc123".to_string(), "feat: Add feature".to_string(), None));
@@ -99,7 +99,7 @@ fn test_github_detection_behavior() {
     };
 
     // Test with GitHub author information
-    let mut summary_with_github = CommitSummary::new();
+    let mut summary_with_github = ChangesetSummary::new();
     summary_with_github.commits.push((
         "abc123".to_string(),
         "feat: Add feature".to_string(),
@@ -180,7 +180,7 @@ fn test_github_detection_from_remote() {
     repo_info.is_github_repo = true;
 
     // Create a test summary
-    let mut summary = vnext::version::CommitSummary::new();
+    let mut summary = vnext::version::ChangesetSummary::new();
     summary
         .commits
         .push(("abc123".to_string(), "feat: Add feature".to_string(), None));

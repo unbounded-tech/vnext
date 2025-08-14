@@ -3,6 +3,7 @@
 use crate::models::error::VNextError;
 use crate::models::repo::RepoInfo;
 use crate::models::commit::CommitAuthor;
+use crate::models::changeset::ChangesetSummary;
 use crate::models::github::{GitHubCommit};
 use reqwest::blocking::Client;
 use std::collections::HashMap;
@@ -10,7 +11,7 @@ use std::collections::HashMap;
 /// Enhance commit summary with GitHub author information
 pub fn enhance_with_github_info(
     repo_info: &RepoInfo,
-    summary: &mut crate::models::commit::CommitSummary,
+    summary: &mut ChangesetSummary,
 ) -> Result<(), VNextError> {
     log::debug!("GitHub integration enabled, fetching commit author information");
     

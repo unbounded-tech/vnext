@@ -5,7 +5,7 @@ use git2::{Commit, Repository};
 use regex::Regex;
 use crate::models::error::VNextError;
 use crate::models::version::VersionBump;
-use crate::models::commit::CommitSummary;
+use crate::models::changeset::ChangesetSummary;
 use log::debug;
 
 /// Parse a version string into a semver Version
@@ -44,9 +44,9 @@ pub fn calculate_version_bump(
     minor_re: &Regex,
     noop_re: &Regex,
     breaking_re: &Regex,
-) -> Result<(VersionBump, CommitSummary), VNextError> {
+) -> Result<(VersionBump, ChangesetSummary), VNextError> {
     let mut bump = VersionBump { major: false, minor: false, patch: false };
-    let mut summary = CommitSummary::new();
+    let mut summary = ChangesetSummary::new();
 
     // Build a revwalk starting from HEAD.
     let mut revwalk = repo.revwalk()?;
@@ -147,7 +147,7 @@ pub fn calculate_version(
     breaking_re: &Regex,
     start_version: &Version,
     base_commit: &Commit,
-) -> Result<(Version, CommitSummary), VNextError> {
+) -> Result<(Version, ChangesetSummary), VNextError> {
     // Calculate version bump
     let (bump, summary) = calculate_version_bump(
         repo, base_commit, head, major_re, minor_re, noop_re, breaking_re)?;

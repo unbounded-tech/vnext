@@ -1,6 +1,6 @@
 //! Changelog generation
 
-use crate::models::commit::CommitSummary;
+use crate::models::changeset::ChangesetSummary;
 use crate::models::repo::RepoInfo;
 use semver::Version;
 
@@ -9,7 +9,7 @@ use semver::Version;
 /// This function generates a formatted changelog based on the provided commit summary,
 /// version information, and repository details.
 pub fn format_changelog(
-    summary: &CommitSummary,
+    summary: &ChangesetSummary,
     next_version: &Version,
     no_header_scaling: bool,
     current_version: &Version,
@@ -94,7 +94,7 @@ pub fn format_changelog(
 /// Output the result of the version calculation
 pub fn output_result(
     next_version: &Version,
-    summary: &CommitSummary,
+    summary: &ChangesetSummary,
     show_changelog: bool,
     no_header_scaling: bool,
     current_version: &Version,
