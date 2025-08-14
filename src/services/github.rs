@@ -4,7 +4,7 @@ use crate::models::error::VNextError;
 use crate::models::repo::RepoInfo;
 use crate::models::commit::CommitAuthor;
 use crate::models::changeset::ChangesetSummary;
-use crate::models::github::{GitHubCommit};
+use crate::models::github::GitHubCommit;
 use reqwest::blocking::Client;
 use std::collections::HashMap;
 

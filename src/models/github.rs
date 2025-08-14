@@ -7,26 +7,26 @@ use serde::{Deserialize, Serialize};
 pub struct GitHubCommit {
     pub sha: String,
     pub commit: GitHubCommitDetails,
-    pub author: Option<GitHubUser>,
+    pub author: Option<GitHubAccountInfo>,
 }
 
 /// GitHub commit details
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GitHubCommitDetails {
-    pub author: GitHubCommitAuthor,
+    pub author: GitCommitAuthor,
     pub message: String,
 }
 
-/// GitHub commit author information
+/// Git commit author information (name and email from git commit)
 #[derive(Serialize, Deserialize, Debug)]
-pub struct GitHubCommitAuthor {
+pub struct GitCommitAuthor {
     pub name: String,
     pub email: String,
 }
 
-/// GitHub user information
+/// GitHub account information for the commit author
 #[derive(Serialize, Deserialize, Debug)]
-pub struct GitHubUser {
+pub struct GitHubAccountInfo {
     pub login: String,
-    pub html_url: String,
+    // html_url field removed as it's not used anywhere in the codebase
 }
