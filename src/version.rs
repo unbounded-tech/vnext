@@ -252,13 +252,12 @@ pub fn calculate_version(
     minor_re: &Regex,
     noop_re: &Regex,
     breaking_re: &Regex,
+    start_version: &Version,
+    base_commit: &Commit,
 ) -> Result<(Version, CommitSummary), VNextError> {
-    // Find the version base
-    let (start_version, base_commit) = find_version_base(repo, head);
-    
     // Calculate version bump
     let (bump, summary) = calculate_version_bump(
-        repo, &base_commit, head, major_re, minor_re, noop_re, breaking_re)?;
+        repo, base_commit, head, major_re, minor_re, noop_re, breaking_re)?;
     
     // Calculate next version
     let next_version = calculate_next_version(&start_version, &bump);
