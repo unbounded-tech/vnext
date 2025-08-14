@@ -1,9 +1,8 @@
 //! Deploy key command implementation
 
 use crate::models::error::VNextError;
-use crate::models::deploy_key::{DeployKeyResponse, DeployKeyList, SecretList, Secret};
+use crate::models::deploy_key::{DeployKeyResponse, DeployKeyList, SecretList};
 use crate::services::git;
-use crate::services::changelog;
 use log::info;
 use reqwest::blocking::Client;
 use serde_json;
@@ -203,7 +202,7 @@ pub fn generate_deploy_key(
     // Try to detect current repository information
     let (detected_owner, detected_name) = match git::open_repository() {
         Ok(repo) => {
-            let repo_info = changelog::get_repo_info(&repo);
+            let repo_info = git::get_repo_info(&repo);
             if repo_info.is_github_repo && !repo_info.owner.is_empty() && !repo_info.name.is_empty() {
                 info!("Detected GitHub repository: {}/{}", repo_info.owner, repo_info.name);
                 (Some(repo_info.owner), Some(repo_info.name))

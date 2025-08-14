@@ -64,7 +64,7 @@ pub fn run_version_command(
     };
     
     // Get repository information
-    let repo_info = changelog::get_repo_info(&repo);
+    let repo_info = git::get_repo_info(&repo);
     
     // Use GitHub integration if repository is on GitHub
     let use_github = repo_info.is_github_repo;
