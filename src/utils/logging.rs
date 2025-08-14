@@ -1,8 +1,11 @@
+//! Logging setup and configuration
+
 use colored::Colorize;
 use fern::Dispatch;
 use log::LevelFilter;
 use std::env;
 
+/// Initialize logging with fern
 pub fn init_logging() -> Result<(), fern::InitError> {
     // Read the desired log level from the environment variable `LOG_LEVEL`
     // Default to "info" if not set.

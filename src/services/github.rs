@@ -1,39 +1,16 @@
-use crate::error::VNextError;
-use crate::changelog::RepoInfo;
-use crate::version::CommitAuthor;
+//! GitHub API integration
+
+use crate::models::error::VNextError;
+use crate::models::repo::RepoInfo;
+use crate::models::commit::CommitAuthor;
+use crate::models::github::{GitHubCommit, GitHubUser};
 use reqwest::blocking::Client;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct GitHubCommit {
-    sha: String,
-    commit: GitHubCommitDetails,
-    author: Option<GitHubUser>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct GitHubCommitDetails {
-    author: GitHubCommitAuthor,
-    message: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct GitHubCommitAuthor {
-    name: String,
-    email: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct GitHubUser {
-    login: String,
-    html_url: String,
-}
 
 /// Enhance commit summary with GitHub author information
 pub fn enhance_with_github_info(
     repo_info: &RepoInfo,
-    summary: &mut crate::version::CommitSummary,
+    summary: &mut crate::models::commit::CommitSummary,
 ) -> Result<(), VNextError> {
     log::debug!("GitHub integration enabled, fetching commit author information");
     

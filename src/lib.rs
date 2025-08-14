@@ -1,19 +1,45 @@
 //! A library for calculating the next version based on conventional commits.
 
-pub mod changelog;
+pub mod models;
+pub mod utils;
+pub mod services;
+pub mod commands;
 pub mod cli;
-pub mod error;
-pub mod git;
-pub mod github;
-pub mod logging;
-pub mod regex;
-pub mod version;
 
 // Re-export commonly used types and functions
-pub use changelog::{get_repo_info, output_result, output_fallback};
 pub use cli::Cli;
-pub use error::VNextError;
-pub use git::{extract_repo_info, find_latest_tag, find_main_branch, open_repository, resolve_head};
-pub use github::enhance_with_github_info;
-pub use regex::{compile_regexes, BREAKING_REGEX_STR, MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR};
-pub use version::{calculate_next_version, calculate_version_bump, parse_version, CommitSummary, VersionBump, find_version_base, calculate_version};
+pub use models::error::VNextError;
+pub use models::version::VersionBump;
+pub use models::commit::{CommitSummary, CommitAuthor};
+pub use models::repo::RepoInfo;
+pub use utils::git::extract_repo_info;
+pub use services::git::{find_latest_tag, find_main_branch, open_repository, resolve_head};
+pub use services::github::enhance_with_github_info;
+pub use services::version::{calculate_next_version, calculate_version_bump, parse_version, calculate_version};
+pub use services::changelog::{get_repo_info, output_result, output_fallback};
+pub use utils::regex::{compile_regexes, BREAKING_REGEX_STR, MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR};
+
+// Re-export for backward compatibility with tests
+pub mod version {
+    pub use crate::models::version::VersionBump;
+    pub use crate::models::commit::{CommitSummary, CommitAuthor};
+    pub use crate::services::version::{calculate_next_version, calculate_version_bump, parse_version, calculate_version, find_version_base};
+}
+
+pub mod git {
+    pub use crate::utils::git::extract_repo_info;
+    pub use crate::services::git::{find_latest_tag, find_main_branch, open_repository, resolve_head};
+}
+
+pub mod changelog {
+    pub use crate::models::repo::RepoInfo;
+    pub use crate::services::changelog::{get_repo_info, output_result, output_fallback};
+}
+
+pub mod github {
+    pub use crate::services::github::enhance_with_github_info;
+}
+
+pub mod error {
+    pub use crate::models::error::VNextError;
+}
