@@ -39,7 +39,10 @@ pub fn calculate_version_bump(
     repo: &Repository,
     _from: &Commit,
     to: &Commit,
+    parser: &dyn crate::models::commit::CommitParser,
 ) -> Result<(VersionBump, ChangesetSummary), VNextError> {
+    log::debug!("Calculating version bump using parser: {}", parser.name());
+    
     let mut bump = VersionBump { major: false, minor: false, patch: false };
     let mut summary = ChangesetSummary::new();
 
@@ -58,23 +61,22 @@ pub fn calculate_version_bump(
         let git_commit = repo.find_commit(oid)?;
         let message = git_commit.message().unwrap_or("").to_string();
         
-        // Parse the commit message
-        let commit = crate::models::commit::Commit::parse(oid.to_string(), message);
-        
-        // Determine version bump based on commit type and breaking changes
-        if commit.is_major_change() {
+        // Use the parser to determine the type of change
+        if parser.is_major_change(&message) {
             bump.major = true;
             summary.major += 1;
-        } else if commit.is_minor_change() {
+        } else if parser.is_minor_change(&message) {
             bump.minor = true;
             summary.minor += 1;
-        } else if commit.is_patch_change() {
+        } else if !parser.is_noop_change(&message) {
             bump.patch = true;
             summary.patch += 1;
         } else {
             summary.noop += 1;
         }
         
+        // Parse the commit message into a structured Commit object
+        let commit = parser.parse_commit(oid.to_string(), message);
         summary.commits.push(commit);
     }
 
@@ -83,8 +85,8 @@ pub fn calculate_version_bump(
 
 /// Find the version base (main branch, latest tag, base commit)
 pub fn find_version_base<'repo, 'head>(repo: &'repo Repository, head: &'head Commit<'repo>) -> (Version, Commit<'repo>) {
-    let main_branch = crate::core::git::find_main_branch(repo).expect("Failed to find main branch");
-    debug!("Main branch detected: {}", main_branch);
+    let main_branch = crate::core::git::find_trunk_branch(repo).expect("Failed to find main branch");
+    debug!("Trunk branch detected: {}", main_branch);
 
     let (start_version, last_tag_commit) = match crate::core::git::find_latest_tag(repo) {
         Some((tag, commit)) => {
@@ -141,10 +143,11 @@ pub fn calculate_version(
     head: &Commit,
     start_version: &Version,
     base_commit: &Commit,
+    parser: &dyn crate::models::commit::CommitParser,
 ) -> Result<(Version, ChangesetSummary), VNextError> {
     // Calculate version bump
     let (bump, summary) = calculate_version_bump(
-        repo, base_commit, head)?;
+        repo, base_commit, head, parser)?;
     
     // Calculate next version
     let next_version = calculate_next_version(&start_version, &bump);

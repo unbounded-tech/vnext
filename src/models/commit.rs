@@ -77,17 +77,56 @@ impl Commit {
     }
 }
 
-/// Trait for commit message parsers
+/// Trait for commit message parsers.
+///
+/// This trait defines the interface for commit message parsers. Parsers are used to
+/// determine the type of change represented by a commit message, which is then used
+/// to calculate the next semantic version.
+///
+/// Implementations of this trait should be able to:
+/// - Determine if a commit message represents a major change
+/// - Determine if a commit message represents a minor change
+/// - Determine if a commit message represents a no-op change
+/// - Determine if a commit message represents a breaking change
+/// - Parse a commit message into a structured Commit object
 pub trait CommitParser {
-    /// Parse a commit message into a Commit struct
-    fn parse(&self, commit_id: String, message: String) -> Commit;
-}
-
-/// Conventional commit parser implementation
-pub struct ConventionalCommitParser;
-
-impl CommitParser for ConventionalCommitParser {
-    fn parse(&self, commit_id: String, message: String) -> Commit {
-        Commit::parse(commit_id, message)
-    }
+    /// Parse a commit message and determine if it represents a major change.
+    ///
+    /// A major change is one that breaks backward compatibility, such as removing
+    /// a public API or changing the behavior of an existing API in a way that
+    /// requires users to update their code.
+    fn is_major_change(&self, message: &str) -> bool;
+    
+    /// Parse a commit message and determine if it represents a minor change.
+    ///
+    /// A minor change is one that adds new functionality without breaking backward
+    /// compatibility, such as adding a new API or extending an existing one.
+    fn is_minor_change(&self, message: &str) -> bool;
+    
+    /// Parse a commit message and determine if it represents a no-op change.
+    ///
+    /// A no-op change is one that does not affect the functionality of the code,
+    /// such as updating documentation, fixing typos, or refactoring code without
+    /// changing its behavior.
+    fn is_noop_change(&self, message: &str) -> bool;
+    
+    /// Parse a commit message and determine if it represents a breaking change.
+    ///
+    /// A breaking change is one that breaks backward compatibility, such as removing
+    /// a public API or changing the behavior of an existing API in a way that
+    /// requires users to update their code.
+    fn is_breaking_change(&self, message: &str) -> bool;
+    
+    /// Parse a commit message into a structured Commit object.
+    ///
+    /// This method parses a commit message into a structured Commit object, which
+    /// contains information about the commit such as its type, scope, title, body,
+    /// and whether it represents a breaking change.
+    fn parse_commit(&self, commit_id: String, message: String) -> Commit;
+    
+    /// Get the name of the parser.
+    ///
+    /// This method returns a string that identifies the parser, such as "conventional"
+    /// or "custom-regex".
+    fn name(&self) -> &str;
 }

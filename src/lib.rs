@@ -14,7 +14,7 @@ pub use models::version::VersionBump;
 pub use models::commit::{Commit, CommitAuthor};
 pub use models::changeset::ChangesetSummary;
 pub use models::repo::RepoInfo;
-pub use core::git::{extract_repo_info, find_latest_tag, find_main_branch, open_repository, resolve_head, get_repo_info};
+pub use core::git::{extract_repo_info, find_latest_tag, find_trunk_branch, open_repository, resolve_head, get_repo_info};
 pub use core::github::enhance_with_github_info;
 pub use core::version::{calculate_next_version, calculate_version_bump, parse_version, calculate_version};
 pub use core::changelog::{output_result, output_fallback, format_changelog};
@@ -29,7 +29,7 @@ pub mod version {
 }
 
 pub mod git {
-    pub use crate::core::git::{extract_repo_info, find_latest_tag, find_main_branch, open_repository, resolve_head};
+    pub use crate::core::git::{extract_repo_info, find_latest_tag, find_trunk_branch, open_repository, resolve_head};
 }
 
 pub mod changelog {

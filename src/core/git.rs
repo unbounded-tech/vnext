@@ -6,7 +6,7 @@ use crate::models::repo::RepoInfo;
 use url::Url;
 
 /// Find the main branch ("main" or "master").
-pub fn find_main_branch(repo: &Repository) -> Option<String> {
+pub fn find_trunk_branch(repo: &Repository) -> Option<String> {
     for branch in ["main", "master"] {
         if repo.find_branch(branch, git2::BranchType::Local).is_ok() {
             return Some(branch.to_string());

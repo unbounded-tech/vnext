@@ -4,12 +4,44 @@ use crate::models::error::VNextError;
 use crate::core::git;
 use crate::core::version;
 use crate::core::changelog;
+use crate::parsers::{ParserFactory, ParserStrategy};
+
 /// Run the vnext command
 pub fn run_vnext_command(
+    parser_name: &str,
+    major_pattern: &str,
+    minor_pattern: &str,
+    noop_pattern: &str,
+    breaking_pattern: &str,
     show_changelog: bool,
     no_header_scaling: bool,
     current: bool,
 ) -> Result<(), VNextError> {
+    // Create the appropriate parser based on the strategy
+    log::debug!("Using parser strategy: {}", parser_name);
+    
+    let strategy = match parser_name {
+        "conventional" => {
+            log::debug!("Selected conventional commit parser strategy");
+            ParserStrategy::Conventional
+        },
+        "custom" => {
+            log::debug!("Selected custom regex parser strategy");
+            ParserStrategy::CustomRegex {
+                major_pattern: major_pattern.to_string(),
+                minor_pattern: minor_pattern.to_string(),
+                noop_pattern: noop_pattern.to_string(),
+                breaking_pattern: breaking_pattern.to_string(),
+            }
+        },
+        _ => {
+            log::warn!("Unknown parser strategy '{}', falling back to conventional", parser_name);
+            ParserStrategy::Conventional
+        }
+    };
+    
+    let parser = ParserFactory::create(&strategy);
+    log::debug!("Parser initialized: {}", parser.name());
 
     // Open repository and handle errors
     let repo = match git::open_repository() {
@@ -41,7 +73,7 @@ pub fn run_vnext_command(
 
     // Calculate version
     let (next_version, mut summary) = match version::calculate_version(
-        &repo, &head, &current_version, &base_commit
+        &repo, &head, &current_version, &base_commit, &*parser
     ) {
         Ok(result) => result,
         Err(e) => {
