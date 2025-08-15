@@ -4,8 +4,8 @@
 //! the `Commands` enum in cli.rs.
 
 pub mod deploy_key;
-pub mod version;
+pub mod vnext;
 
 // Re-export command functions
 pub use deploy_key::generate_deploy_key;
-pub use version::run_version_command;
+pub use vnext::run_vnext_command;

@@ -1,4 +1,4 @@
-//! Version command implementation
+//! VNext command implementation
 
 use crate::models::error::VNextError;
 use crate::services::git;
@@ -7,8 +7,8 @@ use crate::services::changelog;
 use crate::utils::regex;
 use regex::Regex;
 
-/// Run the version command
-pub fn run_version_command(
+/// Run the vnext command
+pub fn run_vnext_command(
     major_pattern: &str,
     minor_pattern: &str,
     noop_pattern: &str,

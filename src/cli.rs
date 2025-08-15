@@ -81,8 +81,8 @@ pub fn run(cli: Cli) -> Result<(), VNextError> {
         }
     }
     
-    // If no subcommand was provided, run the default version calculation logic
-    commands::version::run_version_command(
+    // If no subcommand was provided, run the default vnext calculation logic
+    commands::vnext::run_vnext_command(
         &cli.major,
         &cli.minor,
         &cli.noop,
