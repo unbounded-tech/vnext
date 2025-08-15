@@ -1,27 +1,51 @@
 //! VNext command implementation
 
 use crate::models::error::VNextError;
-use crate::services::git;
-use crate::services::version;
-use crate::services::changelog;
-use crate::utils::regex;
-use regex::Regex;
+use crate::core::git;
+use crate::core::version;
+use crate::core::changelog;
+use crate::parsers::{ParserFactory, ParserStrategy};
 
 /// Run the vnext command
 pub fn run_vnext_command(
+    parser_name: &str,
     major_pattern: &str,
     minor_pattern: &str,
     noop_pattern: &str,
     breaking_pattern: &str,
+    type_pattern: &str,
+    scope_pattern: &str,
     show_changelog: bool,
     no_header_scaling: bool,
     current: bool,
 ) -> Result<(), VNextError> {
-    // Compile regex patterns
-    let major_re = Regex::new(major_pattern).map_err(|e| VNextError::RegexError(e))?;
-    let minor_re = Regex::new(minor_pattern).map_err(|e| VNextError::RegexError(e))?;
-    let noop_re = Regex::new(noop_pattern).map_err(|e| VNextError::RegexError(e))?;
-    let breaking_re = Regex::new(breaking_pattern).map_err(|e| VNextError::RegexError(e))?;
+    // Create the appropriate parser based on the strategy
+    log::debug!("Using parser strategy: {}", parser_name);
+    
+    let strategy = match parser_name {
+        "conventional" => {
+            log::debug!("Selected conventional commit parser strategy");
+            ParserStrategy::Conventional
+        },
+        "custom" => {
+            log::debug!("Selected custom regex parser strategy");
+            ParserStrategy::CustomRegex {
+                major_pattern: major_pattern.to_string(),
+                minor_pattern: minor_pattern.to_string(),
+                noop_pattern: noop_pattern.to_string(),
+                breaking_pattern: breaking_pattern.to_string(),
+                type_pattern: type_pattern.to_string(),
+                scope_pattern: scope_pattern.to_string(),
+            }
+        },
+        _ => {
+            log::warn!("Unknown parser strategy '{}', falling back to conventional", parser_name);
+            ParserStrategy::Conventional
+        }
+    };
+    
+    let parser = ParserFactory::create(&strategy);
+    log::debug!("Parser initialized: {}", parser.name());
 
     // Open repository and handle errors
     let repo = match git::open_repository() {
@@ -53,7 +77,7 @@ pub fn run_vnext_command(
 
     // Calculate version
     let (next_version, mut summary) = match version::calculate_version(
-        &repo, &head, &major_re, &minor_re, &noop_re, &breaking_re, &current_version, &base_commit
+        &repo, &head, &current_version, &base_commit, &*parser
     ) {
         Ok(result) => result,
         Err(e) => {
@@ -71,7 +95,7 @@ pub fn run_vnext_command(
     
     // Handle GitHub integration if needed
     if show_changelog && use_github {
-        if let Err(e) = crate::services::github::enhance_with_github_info(&repo_info, &mut summary) {
+        if let Err(e) = crate::core::github::enhance_with_github_info(&repo_info, &mut summary) {
             log::warn!("Failed to fetch author information from GitHub API: {}", e);
         }
     }

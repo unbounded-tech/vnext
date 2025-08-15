@@ -2,7 +2,6 @@
 
 use semver::{BuildMetadata, Prerelease, Version};
 use git2::{Commit, Repository};
-use regex::Regex;
 use crate::models::error::VNextError;
 use crate::models::version::VersionBump;
 use crate::models::changeset::ChangesetSummary;
@@ -40,11 +39,10 @@ pub fn calculate_version_bump(
     repo: &Repository,
     _from: &Commit,
     to: &Commit,
-    major_re: &Regex,
-    minor_re: &Regex,
-    noop_re: &Regex,
-    breaking_re: &Regex,
+    parser: &dyn crate::models::commit::CommitParser,
 ) -> Result<(VersionBump, ChangesetSummary), VNextError> {
+    log::debug!("Calculating version bump using parser: {}", parser.name());
+    
     let mut bump = VersionBump { major: false, minor: false, patch: false };
     let mut summary = ChangesetSummary::new();
 
@@ -53,31 +51,40 @@ pub fn calculate_version_bump(
     revwalk.push(to.id())?;
 
     // If a previous tag exists, hide it so we walk only the newer commits.
-    if let Some((_, tag_commit)) = crate::services::git::find_latest_tag(repo) {
+    if let Some((_, tag_commit)) = crate::core::git::find_latest_tag(repo) {
         revwalk.hide(tag_commit.id())?;
     }
 
     // Iterate commits (newest first). We collect and then reverse for changelog display.
     for oid in revwalk {
         let oid = oid?;
-        let commit = repo.find_commit(oid)?;
-        let message = commit.message().unwrap_or("").to_string();
-
-        // Decide bump level
-        if breaking_re.is_match(&message) || major_re.is_match(&message) {
+        let git_commit = repo.find_commit(oid)?;
+        let message = git_commit.message().unwrap_or("").to_string();
+        
+        // Parse the commit message into a structured Commit object FIRST
+        // This avoids parsing the same message multiple times
+        let commit = parser.parse_commit(oid.to_string(), message);
+        
+        // Use the Commit object's methods to determine the type of change
+        if commit.is_major_change() {
             bump.major = true;
             summary.major += 1;
-        } else if minor_re.is_match(&message) {
+            log::debug!("Detected major change in commit: {}", commit.commit_id);
+        } else if commit.is_minor_change() {
             bump.minor = true;
             summary.minor += 1;
-        } else if !noop_re.is_match(&message) {
+            log::debug!("Detected minor change in commit: {}", commit.commit_id);
+        } else if !commit.is_noop_change() {
             bump.patch = true;
             summary.patch += 1;
+            log::debug!("Detected patch change in commit: {}", commit.commit_id);
         } else {
             summary.noop += 1;
+            log::debug!("Detected no-op change in commit: {}", commit.commit_id);
         }
-
-        summary.commits.push((oid.to_string(), message, None));
+        
+        // Add the commit to the summary
+        summary.commits.push(commit);
     }
 
     Ok((bump, summary))
@@ -85,10 +92,10 @@ pub fn calculate_version_bump(
 
 /// Find the version base (main branch, latest tag, base commit)
 pub fn find_version_base<'repo, 'head>(repo: &'repo Repository, head: &'head Commit<'repo>) -> (Version, Commit<'repo>) {
-    let main_branch = crate::services::git::find_main_branch(repo).expect("Failed to find main branch");
-    debug!("Main branch detected: {}", main_branch);
+    let main_branch = crate::core::git::find_trunk_branch(repo).expect("Failed to find main branch");
+    debug!("Trunk branch detected: {}", main_branch);
 
-    let (start_version, last_tag_commit) = match crate::services::git::find_latest_tag(repo) {
+    let (start_version, last_tag_commit) = match crate::core::git::find_latest_tag(repo) {
         Some((tag, commit)) => {
             let version = parse_version(&tag).unwrap_or_else(|_| Version::new(0, 0, 0));
             debug!("Last release: {} at commit {}", tag, commit.id());
@@ -122,7 +129,7 @@ pub fn find_version_base<'repo, 'head>(repo: &'repo Repository, head: &'head Com
     debug!("Last tag or base commit: {}", last_tag_commit.id());
 
     // Determine the base commit: use merge base with main if tag exists, otherwise use the initial commit
-    let base_commit = if crate::services::git::find_latest_tag(repo).is_some() {
+    let base_commit = if crate::core::git::find_latest_tag(repo).is_some() {
         let merge_base = repo
             .merge_base(head.id(), last_tag_commit.id())
             .expect("Failed to find merge base between HEAD and tag");
@@ -141,16 +148,13 @@ pub fn find_version_base<'repo, 'head>(repo: &'repo Repository, head: &'head Com
 pub fn calculate_version(
     repo: &Repository,
     head: &Commit,
-    major_re: &Regex,
-    minor_re: &Regex,
-    noop_re: &Regex,
-    breaking_re: &Regex,
     start_version: &Version,
     base_commit: &Commit,
+    parser: &dyn crate::models::commit::CommitParser,
 ) -> Result<(Version, ChangesetSummary), VNextError> {
     // Calculate version bump
     let (bump, summary) = calculate_version_bump(
-        repo, base_commit, head, major_re, minor_re, noop_re, breaking_re)?;
+        repo, base_commit, head, parser)?;
     
     // Calculate next version
     let next_version = calculate_next_version(&start_version, &bump);

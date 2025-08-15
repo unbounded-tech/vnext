@@ -13,7 +13,7 @@ pub mod changeset;
 
 // Re-export commonly used types
 pub use version::VersionBump;
-pub use commit::CommitAuthor;
+pub use commit::{Commit, CommitAuthor};
 pub use changeset::ChangesetSummary;
 pub use error::VNextError;
 pub use repo::RepoInfo;
