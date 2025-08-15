@@ -6,7 +6,7 @@ use crate::models::repo::RepoInfo;
 use url::Url;
 
 /// Find the main branch ("main" or "master").
-pub fn find_main_branch(repo: &Repository) -> Option<String> {
+pub fn find_trunk_branch(repo: &Repository) -> Option<String> {
     for branch in ["main", "master"] {
         if repo.find_branch(branch, git2::BranchType::Local).is_ok() {
             return Some(branch.to_string());
@@ -19,12 +19,12 @@ pub fn find_main_branch(repo: &Repository) -> Option<String> {
 pub fn find_latest_tag(repo: &Repository) -> Option<(String, Commit)> {
     let tags = repo.tag_names(None).expect("Failed to get tag names");
     let mut latest: Option<(String, Commit)> = None;
-    let mut max_version = crate::services::version::parse_version("0.0.0").unwrap();
+    let mut max_version = crate::core::version::parse_version("0.0.0").unwrap();
 
     for tag in tags.iter().flatten() {
         if let Ok(reference) = repo.find_reference(&format!("refs/tags/{}", tag)) {
             if let Ok(commit) = reference.peel_to_commit() {
-                if let Ok(version) = crate::services::version::parse_version(tag) {
+                if let Ok(version) = crate::core::version::parse_version(tag) {
                     if version > max_version {
                         max_version = version;
                         latest = Some((tag.to_string(), commit));

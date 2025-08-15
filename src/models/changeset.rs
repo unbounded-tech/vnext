@@ -1,6 +1,6 @@
 //! Changeset-related data structures
 
-use crate::models::commit::CommitAuthor;
+use crate::models::commit::Commit;
 
 /// Represents a summary of changes for version calculation
 pub struct ChangesetSummary {
@@ -8,7 +8,7 @@ pub struct ChangesetSummary {
     pub minor: u32,
     pub patch: u32,
     pub noop: u32,
-    pub commits: Vec<(String, String, Option<CommitAuthor>)>, // (commit_id, message, author)
+    pub commits: Vec<Commit>,
 }
 
 impl ChangesetSummary {

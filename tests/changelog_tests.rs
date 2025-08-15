@@ -58,7 +58,7 @@ fn test_changelog() {
     
     let changelog = changelog.trim_end().to_string(); // Remove trailing newlines
     let expected_changelog = format!(
-        "### What's changed in v0.1.1\n\n* fix: 1\n* fix: 2"
+        "### What's changed in v0.1.1\n\n* fix: 1\n\n* fix: 2"
     );
 
     assert_eq!(

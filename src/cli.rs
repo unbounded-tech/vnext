@@ -1,29 +1,41 @@
 //! CLI interface definition
 
 use clap::{Parser, Subcommand};
-use crate::utils::regex::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
 use crate::commands;
 use crate::models::error::VNextError;
+use crate::parsers::custom::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR, TYPE_REGEX_STR, SCOPE_REGEX_STR};
 
 /// CLI for calculating the next version based on conventional commits
 #[derive(Parser, Debug)]
 #[clap(author, version, about = "Calculate the next version based on conventional commits")]
 pub struct Cli {
-    /// Regex for commits triggering a major version bump
+    /// Parser strategy to use (conventional or custom)
+    #[clap(long, default_value = "conventional")]
+    pub parser: String,
+
+    /// Regex for commits triggering a major version bump (used with custom parser)
     #[clap(long, default_value = MAJOR_REGEX_STR)]
     pub major: String,
 
-    /// Regex for commits triggering a minor version bump
+    /// Regex for commits triggering a minor version bump (used with custom parser)
     #[clap(long, default_value = MINOR_REGEX_STR)]
     pub minor: String,
 
-    /// Regex for commits that should not trigger a version bump
+    /// Regex for commits that should not trigger a version bump (used with custom parser)
     #[clap(long, default_value = NOOP_REGEX_STR)]
     pub noop: String,
 
-    /// Regex for commits indicating a breaking change
+    /// Regex for commits indicating a breaking change (used with custom parser)
     #[clap(long, default_value = BREAKING_REGEX_STR)]
     pub breaking: String,
+
+    /// Regex for extracting commit type from message (used with custom parser)
+    #[clap(long, default_value = TYPE_REGEX_STR)]
+    pub type_pattern: String,
+
+    /// Regex for extracting commit scope from message (used with custom parser)
+    #[clap(long, default_value = SCOPE_REGEX_STR)]
+    pub scope_pattern: String,
 
     /// Output the changelog with the next version
     #[clap(long)]
@@ -83,10 +95,13 @@ pub fn run(cli: Cli) -> Result<(), VNextError> {
     
     // If no subcommand was provided, run the default vnext calculation logic
     commands::vnext::run_vnext_command(
+        &cli.parser,
         &cli.major,
         &cli.minor,
         &cli.noop,
         &cli.breaking,
+        &cli.type_pattern,
+        &cli.scope_pattern,
         cli.changelog,
         cli.no_header_scaling,
         cli.current,
