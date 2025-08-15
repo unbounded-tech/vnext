@@ -44,7 +44,7 @@ impl Commit {
         let mut commit = Commit::new(commit_id, message.clone());
         
         // Use the master regex to parse the message
-        if let Some(parsed) = crate::utils::regex::parse_conventional_commit(&message) {
+        if let Some(parsed) = crate::parsers::conventional::parse_conventional_commit(&message) {
             commit.commit_type = parsed.commit_type;
             commit.scope = parsed.scope;
             commit.breaking_change_flag = parsed.breaking_change_flag;

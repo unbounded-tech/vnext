@@ -1,5 +1,5 @@
 use vnext::models::commit::Commit;
-use vnext::utils::regex::parse_conventional_commit;
+use vnext::parsers::conventional::parse_conventional_commit;
 
 #[test]
 fn test_parse_conventional_commit() {

@@ -5,6 +5,7 @@ pub mod utils;
 pub mod services;
 pub mod commands;
 pub mod cli;
+pub mod parsers;
 
 // Re-export commonly used types and functions
 pub use cli::Cli;
@@ -17,7 +18,7 @@ pub use services::git::{extract_repo_info, find_latest_tag, find_main_branch, op
 pub use services::github::enhance_with_github_info;
 pub use services::version::{calculate_next_version, calculate_version_bump, parse_version, calculate_version};
 pub use services::changelog::{output_result, output_fallback, format_changelog};
-pub use utils::regex::{parse_conventional_commit, CONVENTIONAL_COMMIT_REGEX_STR};
+pub use parsers::conventional::{parse_conventional_commit, CONVENTIONAL_COMMIT_REGEX_STR};
 
 // Re-export for backward compatibility with tests
 pub mod version {

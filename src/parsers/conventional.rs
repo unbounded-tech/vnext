@@ -1,4 +1,4 @@
-//! Regex pattern compilation and validation
+//! Regex pattern compilation and validation for conventional commits
 
 pub use regex::Regex;
 
