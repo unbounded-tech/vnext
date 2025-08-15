@@ -8,4 +8,4 @@ pub mod regex;
 
 // Re-export commonly used functions
 pub use logging::init_logging;
-pub use regex::{compile_regexes, BREAKING_REGEX_STR, MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR};
+pub use regex::parse_conventional_commit;

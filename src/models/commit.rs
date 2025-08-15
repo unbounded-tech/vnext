@@ -58,17 +58,17 @@ impl Commit {
     
     /// Check if this commit represents a major change
     pub fn is_major_change(&self) -> bool {
-        self.breaking_change_flag || self.breaking_change_body
+        self.breaking_change_flag || self.breaking_change_body || self.commit_type == "major"
     }
     
     /// Check if this commit represents a minor change
     pub fn is_minor_change(&self) -> bool {
-        self.commit_type == "feat"
+        self.commit_type == "feat" || self.commit_type == "minor"
     }
     
     /// Check if this commit represents a patch change
     pub fn is_patch_change(&self) -> bool {
-        self.commit_type == "fix"
+        !(self.is_major_change() || self.is_minor_change() || self.is_noop_change())
     }
     
     /// Check if this commit represents a no-op change

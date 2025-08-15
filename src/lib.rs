@@ -17,7 +17,7 @@ pub use services::git::{extract_repo_info, find_latest_tag, find_main_branch, op
 pub use services::github::enhance_with_github_info;
 pub use services::version::{calculate_next_version, calculate_version_bump, parse_version, calculate_version};
 pub use services::changelog::{output_result, output_fallback, format_changelog};
-pub use utils::regex::{compile_regexes, parse_conventional_commit, BREAKING_REGEX_STR, MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, CONVENTIONAL_COMMIT_REGEX_STR};
+pub use utils::regex::{parse_conventional_commit, CONVENTIONAL_COMMIT_REGEX_STR};
 
 // Re-export for backward compatibility with tests
 pub mod version {

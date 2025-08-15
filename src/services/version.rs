@@ -2,7 +2,6 @@
 
 use semver::{BuildMetadata, Prerelease, Version};
 use git2::{Commit, Repository};
-use regex::Regex;
 use crate::models::error::VNextError;
 use crate::models::version::VersionBump;
 use crate::models::changeset::ChangesetSummary;
@@ -40,10 +39,6 @@ pub fn calculate_version_bump(
     repo: &Repository,
     _from: &Commit,
     to: &Commit,
-    major_re: &Regex,
-    minor_re: &Regex,
-    noop_re: &Regex,
-    breaking_re: &Regex,
 ) -> Result<(VersionBump, ChangesetSummary), VNextError> {
     let mut bump = VersionBump { major: false, minor: false, patch: false };
     let mut summary = ChangesetSummary::new();
@@ -67,13 +62,13 @@ pub fn calculate_version_bump(
         let commit = crate::models::commit::Commit::parse(oid.to_string(), message);
         
         // Determine version bump based on commit type and breaking changes
-        if commit.is_major_change() || major_re.is_match(&commit.raw_message) || breaking_re.is_match(&commit.raw_message) {
+        if commit.is_major_change() {
             bump.major = true;
             summary.major += 1;
-        } else if commit.is_minor_change() || minor_re.is_match(&commit.raw_message) {
+        } else if commit.is_minor_change() {
             bump.minor = true;
             summary.minor += 1;
-        } else if commit.is_patch_change() || !noop_re.is_match(&commit.raw_message) {
+        } else if commit.is_patch_change() {
             bump.patch = true;
             summary.patch += 1;
         } else {
@@ -144,16 +139,12 @@ pub fn find_version_base<'repo, 'head>(repo: &'repo Repository, head: &'head Com
 pub fn calculate_version(
     repo: &Repository,
     head: &Commit,
-    major_re: &Regex,
-    minor_re: &Regex,
-    noop_re: &Regex,
-    breaking_re: &Regex,
     start_version: &Version,
     base_commit: &Commit,
 ) -> Result<(Version, ChangesetSummary), VNextError> {
     // Calculate version bump
     let (bump, summary) = calculate_version_bump(
-        repo, base_commit, head, major_re, minor_re, noop_re, breaking_re)?;
+        repo, base_commit, head)?;
     
     // Calculate next version
     let next_version = calculate_next_version(&start_version, &bump);

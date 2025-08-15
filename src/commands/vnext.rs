@@ -4,24 +4,12 @@ use crate::models::error::VNextError;
 use crate::services::git;
 use crate::services::version;
 use crate::services::changelog;
-use crate::utils::regex;
-use regex::Regex;
-
 /// Run the vnext command
 pub fn run_vnext_command(
-    major_pattern: &str,
-    minor_pattern: &str,
-    noop_pattern: &str,
-    breaking_pattern: &str,
     show_changelog: bool,
     no_header_scaling: bool,
     current: bool,
 ) -> Result<(), VNextError> {
-    // Compile regex patterns
-    let major_re = Regex::new(major_pattern).map_err(|e| VNextError::RegexError(e))?;
-    let minor_re = Regex::new(minor_pattern).map_err(|e| VNextError::RegexError(e))?;
-    let noop_re = Regex::new(noop_pattern).map_err(|e| VNextError::RegexError(e))?;
-    let breaking_re = Regex::new(breaking_pattern).map_err(|e| VNextError::RegexError(e))?;
 
     // Open repository and handle errors
     let repo = match git::open_repository() {
@@ -53,7 +41,7 @@ pub fn run_vnext_command(
 
     // Calculate version
     let (next_version, mut summary) = match version::calculate_version(
-        &repo, &head, &major_re, &minor_re, &noop_re, &breaking_re, &current_version, &base_commit
+        &repo, &head, &current_version, &base_commit
     ) {
         Ok(result) => result,
         Err(e) => {
