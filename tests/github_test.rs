@@ -1,12 +1,12 @@
 use clap::Parser;
 use semver::Version;
-use vnext::version::{CommitAuthor, CommitSummary};
+use vnext::version::{CommitAuthor, ChangesetSummary};
 use vnext::changelog::RepoInfo;
 
 #[test]
 fn test_changelog_with_author_info() {
-    // Create a CommitSummary with author information
-    let mut summary = CommitSummary::new();
+    // Create a ChangesetSummary with author information
+    let mut summary = ChangesetSummary::new();
 
     // Add a commit with author information
     let author1 = CommitAuthor {
@@ -43,7 +43,7 @@ fn test_changelog_with_author_info() {
     let version = Version::new(1, 0, 0);
     let current_version = Version::new(0, 9, 0);
     let repo_info = RepoInfo::new(); // Empty repo info for tests
-    let changelog = summary.format_changelog(&version, false, &current_version, &repo_info); // Use default header scaling
+    let changelog = vnext::changelog::format_changelog(&summary, &version, false, &current_version, &repo_info); // Use default header scaling
 
     // Verify the changelog contains author information
     assert!(changelog.contains("### What's changed in v1.0.0"));
@@ -83,10 +83,10 @@ fn test_cli_changelog_flag() {
 
 #[test]
 fn test_github_detection_behavior() {
-    use vnext::version::{CommitAuthor, CommitSummary};
+    use vnext::version::{CommitAuthor, ChangesetSummary};
 
     // Create a test summary with commits
-    let mut summary = CommitSummary::new();
+    let mut summary = ChangesetSummary::new();
     summary
         .commits
         .push(("abc123".to_string(), "feat: Add feature".to_string(), None));
@@ -99,7 +99,7 @@ fn test_github_detection_behavior() {
     };
 
     // Test with GitHub author information
-    let mut summary_with_github = CommitSummary::new();
+    let mut summary_with_github = ChangesetSummary::new();
     summary_with_github.commits.push((
         "abc123".to_string(),
         "feat: Add feature".to_string(),
@@ -109,7 +109,7 @@ fn test_github_detection_behavior() {
     let current_version = Version::new(0, 9, 0);
     let repo_info = RepoInfo::new(); // Empty repo info for tests
     let changelog_with_github =
-        summary_with_github.format_changelog(&semver::Version::new(1, 0, 0), false, &current_version, &repo_info);
+        vnext::changelog::format_changelog(&summary_with_github, &semver::Version::new(1, 0, 0), false, &current_version, &repo_info);
     assert!(
         changelog_with_github.contains("(by @testuser)"),
         "Changelog should include GitHub username when GitHub author information is available"
@@ -118,7 +118,7 @@ fn test_github_detection_behavior() {
     // Test without GitHub author information
     let current_version = Version::new(0, 9, 0);
     let repo_info = RepoInfo::new(); // Empty repo info for tests
-    let changelog_without_github = summary.format_changelog(&semver::Version::new(1, 0, 0), false, &current_version, &repo_info);
+    let changelog_without_github = vnext::changelog::format_changelog(&summary, &semver::Version::new(1, 0, 0), false, &current_version, &repo_info);
     assert!(!changelog_without_github.contains("(by @testuser)"),
         "Changelog should not include GitHub username when GitHub author information is not available");
 }
@@ -180,7 +180,7 @@ fn test_github_detection_from_remote() {
     repo_info.is_github_repo = true;
 
     // Create a test summary
-    let mut summary = vnext::version::CommitSummary::new();
+    let mut summary = vnext::version::ChangesetSummary::new();
     summary
         .commits
         .push(("abc123".to_string(), "feat: Add feature".to_string(), None));
