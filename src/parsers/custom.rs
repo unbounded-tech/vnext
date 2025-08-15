@@ -98,13 +98,7 @@ impl CommitParser for CustomRegexParser {
         
         // Set breaking change flag
         commit.breaking_change_flag = is_breaking;
-        
-        // Handle major changes - if the message matches the major pattern,
-        // ensure the commit type is set to "major" so is_major_change() returns true
-        if is_major {
-            commit.commit_type = "major".to_string();
-        }
-        
+                
         // Log information about the commit type for debugging
         if is_breaking || is_major {
             log::debug!("Custom parser: Detected major change in commit: {}", message.lines().next().unwrap_or(""));
