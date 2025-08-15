@@ -2,7 +2,7 @@
 
 use crate::models::error::VNextError;
 use crate::models::deploy_key::{DeployKeyResponse, DeployKeyList, SecretList};
-use crate::services::git;
+use crate::core::git;
 use log::info;
 use reqwest::blocking::Client;
 use serde_json;

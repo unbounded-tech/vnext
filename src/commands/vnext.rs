@@ -1,9 +1,9 @@
 //! VNext command implementation
 
 use crate::models::error::VNextError;
-use crate::services::git;
-use crate::services::version;
-use crate::services::changelog;
+use crate::core::git;
+use crate::core::version;
+use crate::core::changelog;
 /// Run the vnext command
 pub fn run_vnext_command(
     show_changelog: bool,
@@ -59,7 +59,7 @@ pub fn run_vnext_command(
     
     // Handle GitHub integration if needed
     if show_changelog && use_github {
-        if let Err(e) = crate::services::github::enhance_with_github_info(&repo_info, &mut summary) {
+        if let Err(e) = crate::core::github::enhance_with_github_info(&repo_info, &mut summary) {
             log::warn!("Failed to fetch author information from GitHub API: {}", e);
         }
     }
