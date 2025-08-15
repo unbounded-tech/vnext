@@ -65,80 +65,6 @@ impl ConventionalCommitParser {
 }
 
 impl CommitParser for ConventionalCommitParser {
-    fn is_major_change(&self, message: &str) -> bool {
-        if let Some(parsed) = parse_conventional_commit(message) {
-            let is_major = parsed.breaking_change_flag || parsed.breaking_change_body || parsed.commit_type == "major";
-            
-            if is_major {
-                log::debug!("Conventional parser: Detected major change in commit: {}", message.lines().next().unwrap_or(""));
-                if parsed.breaking_change_flag {
-                    log::debug!("  Reason: Breaking change flag (!) present");
-                }
-                if parsed.breaking_change_body {
-                    log::debug!("  Reason: BREAKING CHANGE: in commit body");
-                }
-                if parsed.commit_type == "major" {
-                    log::debug!("  Reason: Commit type is 'major'");
-                }
-            }
-            
-            is_major
-        } else {
-            log::debug!("Conventional parser: Could not parse commit message: {}", message.lines().next().unwrap_or(""));
-            false
-        }
-    }
-    
-    fn is_minor_change(&self, message: &str) -> bool {
-        if let Some(parsed) = parse_conventional_commit(message) {
-            let is_minor = parsed.commit_type == "feat" || parsed.commit_type == "minor";
-            
-            if is_minor {
-                log::debug!("Conventional parser: Detected minor change in commit: {}", message.lines().next().unwrap_or(""));
-                log::debug!("  Reason: Commit type is '{}'", parsed.commit_type);
-            }
-            
-            is_minor
-        } else {
-            false
-        }
-    }
-    
-    fn is_noop_change(&self, message: &str) -> bool {
-        if let Some(parsed) = parse_conventional_commit(message) {
-            let is_noop = parsed.commit_type == "chore" || parsed.commit_type == "noop";
-            
-            if is_noop {
-                log::debug!("Conventional parser: Detected no-op change in commit: {}", message.lines().next().unwrap_or(""));
-                log::debug!("  Reason: Commit type is '{}'", parsed.commit_type);
-            }
-            
-            is_noop
-        } else {
-            false
-        }
-    }
-    
-    fn is_breaking_change(&self, message: &str) -> bool {
-        if let Some(parsed) = parse_conventional_commit(message) {
-            let is_breaking = parsed.breaking_change_flag || parsed.breaking_change_body;
-            
-            if is_breaking {
-                log::debug!("Conventional parser: Detected breaking change in commit: {}", message.lines().next().unwrap_or(""));
-                if parsed.breaking_change_flag {
-                    log::debug!("  Reason: Breaking change flag (!) present");
-                }
-                if parsed.breaking_change_body {
-                    log::debug!("  Reason: BREAKING CHANGE: in commit body");
-                }
-            }
-            
-            is_breaking
-        } else {
-            false
-        }
-    }
-    
     fn parse_commit(&self, commit_id: String, message: String) -> Commit {
         let mut commit = Commit::new(commit_id, message.clone());
         
@@ -149,6 +75,28 @@ impl CommitParser for ConventionalCommitParser {
             commit.title = parsed.title;
             commit.body = parsed.body;
             commit.breaking_change_body = parsed.breaking_change_body;
+            
+            // Log information about the commit type for debugging
+            if commit.is_major_change() {
+                log::debug!("Conventional parser: Detected major change in commit: {}", message.lines().next().unwrap_or(""));
+                if commit.breaking_change_flag {
+                    log::debug!("  Reason: Breaking change flag (!) present");
+                }
+                if commit.breaking_change_body {
+                    log::debug!("  Reason: BREAKING CHANGE: in commit body");
+                }
+                if commit.commit_type == "major" {
+                    log::debug!("  Reason: Commit type is 'major'");
+                }
+            } else if commit.is_minor_change() {
+                log::debug!("Conventional parser: Detected minor change in commit: {}", message.lines().next().unwrap_or(""));
+                log::debug!("  Reason: Commit type is '{}'", commit.commit_type);
+            } else if commit.is_noop_change() {
+                log::debug!("Conventional parser: Detected no-op change in commit: {}", message.lines().next().unwrap_or(""));
+                log::debug!("  Reason: Commit type is '{}'", commit.commit_type);
+            }
+        } else {
+            log::debug!("Conventional parser: Could not parse commit message: {}", message.lines().next().unwrap_or(""));
         }
         
         commit

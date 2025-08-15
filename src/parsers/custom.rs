@@ -8,6 +8,9 @@ pub const MAJOR_REGEX_STR: &str = r"(?m)^major(\(.+\))?:.*";
 pub const MINOR_REGEX_STR: &str = r"(?m)^(minor|feat)(\(.+\))?:.*";
 pub const NOOP_REGEX_STR: &str = r"(?m)^(noop|chore)(\(.+\))?:.*";
 pub const BREAKING_REGEX_STR: &str = r"(?s)^[^\n]*\n\nBREAKING CHANGE:.*";
+// Regex for extracting type and scope from commit message
+pub const TYPE_REGEX_STR: &str = r"^([\w-]+)((.*))?:";
+pub const SCOPE_REGEX_STR: &str = r"^[\w-]+\((.*)\)!?:";
 
 /// Parser using custom regex patterns for different types of changes
 pub struct CustomRegexParser {
@@ -15,6 +18,8 @@ pub struct CustomRegexParser {
     minor_regex: Regex,
     noop_regex: Regex,
     breaking_regex: Regex,
+    type_regex: Regex,
+    scope_regex: Regex,
 }
 
 impl CustomRegexParser {
@@ -23,12 +28,16 @@ impl CustomRegexParser {
         minor_pattern: &str,
         noop_pattern: &str,
         breaking_pattern: &str,
+        type_pattern: &str,
+        scope_pattern: &str,
     ) -> Result<Self, regex::Error> {
         Ok(CustomRegexParser {
             major_regex: Regex::new(major_pattern)?,
             minor_regex: Regex::new(minor_pattern)?,
             noop_regex: Regex::new(noop_pattern)?,
             breaking_regex: Regex::new(breaking_pattern)?,
+            type_regex: Regex::new(type_pattern)?,
+            scope_regex: Regex::new(scope_pattern)?,
         })
     }
     
@@ -38,58 +47,13 @@ impl CustomRegexParser {
             MINOR_REGEX_STR,
             NOOP_REGEX_STR,
             BREAKING_REGEX_STR,
+            TYPE_REGEX_STR,
+            SCOPE_REGEX_STR,
         ).expect("Default regex patterns should be valid")
     }
 }
 
 impl CommitParser for CustomRegexParser {
-    fn is_major_change(&self, message: &str) -> bool {
-        let is_breaking = self.breaking_regex.is_match(message);
-        let is_major = self.major_regex.is_match(message);
-        
-        if is_breaking || is_major {
-            log::debug!("Custom parser: Detected major change in commit: {}", message.lines().next().unwrap_or(""));
-            if is_breaking {
-                log::debug!("  Reason: Matches breaking change pattern");
-            }
-            if is_major {
-                log::debug!("  Reason: Matches major change pattern");
-            }
-        }
-        
-        is_breaking || is_major
-    }
-    
-    fn is_minor_change(&self, message: &str) -> bool {
-        let is_minor = self.minor_regex.is_match(message);
-        
-        if is_minor {
-            log::debug!("Custom parser: Detected minor change in commit: {}", message.lines().next().unwrap_or(""));
-        }
-        
-        is_minor
-    }
-    
-    fn is_noop_change(&self, message: &str) -> bool {
-        let is_noop = self.noop_regex.is_match(message);
-        
-        if is_noop {
-            log::debug!("Custom parser: Detected no-op change in commit: {}", message.lines().next().unwrap_or(""));
-        }
-        
-        is_noop
-    }
-    
-    fn is_breaking_change(&self, message: &str) -> bool {
-        let is_breaking = self.breaking_regex.is_match(message);
-        
-        if is_breaking {
-            log::debug!("Custom parser: Detected breaking change in commit: {}", message.lines().next().unwrap_or(""));
-        }
-        
-        is_breaking
-    }
-    
     fn parse_commit(&self, commit_id: String, message: String) -> Commit {
         log::debug!("Customer Regex Parser - Message: {}", message);
         let mut commit = Commit::new(commit_id, message.clone());
@@ -99,17 +63,24 @@ impl CommitParser for CustomRegexParser {
         if let Some(first_line) = message.lines().next() {
             commit.title = first_line.to_string();
             
-            // Try to extract commit type from the first line
-            if let Some(colon_pos) = first_line.find(':') {
-                let commit_type = first_line[..colon_pos].trim();
-                commit.commit_type = commit_type.to_string();
-                
-                // Check for scope in parentheses
-                if let (Some(open_paren), Some(close_paren)) = (commit_type.find('('), commit_type.find(')')) {
-                    if open_paren < close_paren {
-                        commit.scope = Some(commit_type[open_paren+1..close_paren].to_string());
-                        commit.commit_type = commit_type[..open_paren].to_string();
-                    }
+            // Extract commit type using type_regex
+            if let Some(captures) = self.type_regex.captures(first_line) {
+                if let Some(type_match) = captures.get(1) {
+                    commit.commit_type = type_match.as_str().to_string();
+                }
+            }
+            
+            // Extract scope using scope_regex
+            if let Some(captures) = self.scope_regex.captures(first_line) {
+                if let Some(scope_match) = captures.get(1) {
+                    commit.scope = Some(scope_match.as_str().to_string());
+                }
+            }
+            
+            // Extract title (everything after the colon and space)
+            if let Some(colon_pos) = first_line.find(": ") {
+                if colon_pos + 2 < first_line.len() {
+                    commit.title = first_line[colon_pos + 2..].to_string();
                 }
             }
         }
@@ -120,7 +91,34 @@ impl CommitParser for CustomRegexParser {
         }
         
         // Set flags based on regex matches
-        commit.breaking_change_flag = self.is_breaking_change(&message);
+        let is_breaking = self.breaking_regex.is_match(&message);
+        let is_major = self.major_regex.is_match(&message);
+        let is_minor = self.minor_regex.is_match(&message);
+        let is_noop = self.noop_regex.is_match(&message);
+        
+        // Set breaking change flag
+        commit.breaking_change_flag = is_breaking;
+        
+        // Handle major changes - if the message matches the major pattern,
+        // ensure the commit type is set to "major" so is_major_change() returns true
+        if is_major {
+            commit.commit_type = "major".to_string();
+        }
+        
+        // Log information about the commit type for debugging
+        if is_breaking || is_major {
+            log::debug!("Custom parser: Detected major change in commit: {}", message.lines().next().unwrap_or(""));
+            if is_breaking {
+                log::debug!("  Reason: Matches breaking change pattern");
+            }
+            if is_major {
+                log::debug!("  Reason: Matches major change pattern");
+            }
+        } else if is_minor {
+            log::debug!("Custom parser: Detected minor change in commit: {}", message.lines().next().unwrap_or(""));
+        } else if is_noop {
+            log::debug!("Custom parser: Detected no-op change in commit: {}", message.lines().next().unwrap_or(""));
+        }
         
         commit
     }

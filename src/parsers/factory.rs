@@ -33,6 +33,8 @@ pub enum ParserStrategy {
         minor_pattern: String,
         noop_pattern: String,
         breaking_pattern: String,
+        type_pattern: String,
+        scope_pattern: String,
     },
 }
 
@@ -70,14 +72,30 @@ impl ParserFactory {
                 log::debug!("Using conventional commit parser");
                 Box::new(ConventionalCommitParser::new())
             },
-            ParserStrategy::CustomRegex { major_pattern, minor_pattern, noop_pattern, breaking_pattern } => {
+            ParserStrategy::CustomRegex {
+                major_pattern,
+                minor_pattern,
+                noop_pattern,
+                breaking_pattern,
+                type_pattern,
+                scope_pattern
+            } => {
                 log::debug!("Using custom regex parser with patterns:");
                 log::debug!("  Major pattern: {}", major_pattern);
                 log::debug!("  Minor pattern: {}", minor_pattern);
                 log::debug!("  No-op pattern: {}", noop_pattern);
                 log::debug!("  Breaking pattern: {}", breaking_pattern);
+                log::debug!("  Type pattern: {}", type_pattern);
+                log::debug!("  Scope pattern: {}", scope_pattern);
                 
-                match CustomRegexParser::new(major_pattern, minor_pattern, noop_pattern, breaking_pattern) {
+                match CustomRegexParser::new(
+                    major_pattern,
+                    minor_pattern,
+                    noop_pattern,
+                    breaking_pattern,
+                    type_pattern,
+                    scope_pattern
+                ) {
                     Ok(parser) => Box::new(parser),
                     Err(e) => {
                         // Fall back to default patterns if custom patterns are invalid
@@ -87,6 +105,8 @@ impl ParserFactory {
                         log::debug!("  Minor pattern: {}", crate::parsers::custom::MINOR_REGEX_STR);
                         log::debug!("  No-op pattern: {}", crate::parsers::custom::NOOP_REGEX_STR);
                         log::debug!("  Breaking pattern: {}", crate::parsers::custom::BREAKING_REGEX_STR);
+                        log::debug!("  Type pattern: {}", crate::parsers::custom::TYPE_REGEX_STR);
+                        log::debug!("  Scope pattern: {}", crate::parsers::custom::SCOPE_REGEX_STR);
                         Box::new(CustomRegexParser::default())
                     }
                 }

@@ -61,22 +61,29 @@ pub fn calculate_version_bump(
         let git_commit = repo.find_commit(oid)?;
         let message = git_commit.message().unwrap_or("").to_string();
         
-        // Use the parser to determine the type of change
-        if parser.is_major_change(&message) {
+        // Parse the commit message into a structured Commit object FIRST
+        // This avoids parsing the same message multiple times
+        let commit = parser.parse_commit(oid.to_string(), message);
+        
+        // Use the Commit object's methods to determine the type of change
+        if commit.is_major_change() {
             bump.major = true;
             summary.major += 1;
-        } else if parser.is_minor_change(&message) {
+            log::debug!("Detected major change in commit: {}", commit.commit_id);
+        } else if commit.is_minor_change() {
             bump.minor = true;
             summary.minor += 1;
-        } else if !parser.is_noop_change(&message) {
+            log::debug!("Detected minor change in commit: {}", commit.commit_id);
+        } else if !commit.is_noop_change() {
             bump.patch = true;
             summary.patch += 1;
+            log::debug!("Detected patch change in commit: {}", commit.commit_id);
         } else {
             summary.noop += 1;
+            log::debug!("Detected no-op change in commit: {}", commit.commit_id);
         }
         
-        // Parse the commit message into a structured Commit object
-        let commit = parser.parse_commit(oid.to_string(), message);
+        // Add the commit to the summary
         summary.commits.push(commit);
     }
 

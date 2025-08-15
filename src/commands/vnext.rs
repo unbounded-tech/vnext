@@ -13,6 +13,8 @@ pub fn run_vnext_command(
     minor_pattern: &str,
     noop_pattern: &str,
     breaking_pattern: &str,
+    type_pattern: &str,
+    scope_pattern: &str,
     show_changelog: bool,
     no_header_scaling: bool,
     current: bool,
@@ -32,6 +34,8 @@ pub fn run_vnext_command(
                 minor_pattern: minor_pattern.to_string(),
                 noop_pattern: noop_pattern.to_string(),
                 breaking_pattern: breaking_pattern.to_string(),
+                type_pattern: type_pattern.to_string(),
+                scope_pattern: scope_pattern.to_string(),
             }
         },
         _ => {

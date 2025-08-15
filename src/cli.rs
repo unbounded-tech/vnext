@@ -3,7 +3,7 @@
 use clap::{Parser, Subcommand};
 use crate::commands;
 use crate::models::error::VNextError;
-use crate::parsers::custom::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
+use crate::parsers::custom::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR, TYPE_REGEX_STR, SCOPE_REGEX_STR};
 
 /// CLI for calculating the next version based on conventional commits
 #[derive(Parser, Debug)]
@@ -28,6 +28,14 @@ pub struct Cli {
     /// Regex for commits indicating a breaking change (used with custom parser)
     #[clap(long, default_value = BREAKING_REGEX_STR)]
     pub breaking: String,
+
+    /// Regex for extracting commit type from message (used with custom parser)
+    #[clap(long, default_value = TYPE_REGEX_STR)]
+    pub type_pattern: String,
+
+    /// Regex for extracting commit scope from message (used with custom parser)
+    #[clap(long, default_value = SCOPE_REGEX_STR)]
+    pub scope_pattern: String,
 
     /// Output the changelog with the next version
     #[clap(long)]
@@ -92,6 +100,8 @@ pub fn run(cli: Cli) -> Result<(), VNextError> {
         &cli.minor,
         &cli.noop,
         &cli.breaking,
+        &cli.type_pattern,
+        &cli.scope_pattern,
         cli.changelog,
         cli.no_header_scaling,
         cli.current,
