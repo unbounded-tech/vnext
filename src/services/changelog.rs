@@ -45,8 +45,15 @@ pub fn format_changelog(
             
             // Add the commit body if present
             if let Some(body) = &commit.body {
+                // If this is a breaking change body, add the prefix back
+                let body_with_prefix = if commit.breaking_change_body {
+                    format!("BREAKING CHANGE: {}", body)
+                } else {
+                    body.clone()
+                };
+                
                 // Format the body with proper indentation and header scaling
-                let formatted_body = format_commit_body(body, no_header_scaling);
+                let formatted_body = format_commit_body(&body_with_prefix, no_header_scaling);
                 if !formatted_body.is_empty() {
                     // Add a single newline before the body
                     changelog.push_str("\n");

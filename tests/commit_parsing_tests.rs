@@ -60,7 +60,7 @@ fn test_parse_conventional_commit() {
     assert_eq!(parsed.title, "Add new feature");
     assert!(parsed.scope.is_none());
     assert!(!parsed.breaking_change_flag);
-    assert_eq!(parsed.body, Some("BREAKING CHANGE: This breaks the old API.".to_string()));
+    assert_eq!(parsed.body, Some("This breaks the old API.".to_string()));
     assert!(parsed.breaking_change_body);
     
     // Test commit with breaking change not at the start of the first line of the body
