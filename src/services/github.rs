@@ -17,7 +17,7 @@ pub fn enhance_with_github_info(
     
     // Extract commit IDs from the summary
     let commit_ids: Vec<String> = summary.commits.iter()
-        .map(|(id, _, _)| id.clone())
+        .map(|commit| commit.commit_id.clone())
         .collect();
     
     // Fetch author information from GitHub API
@@ -32,12 +32,11 @@ pub fn enhance_with_github_info(
             }
             
             // Update the summary with author information
-            for i in 0..summary.commits.len() {
-                let commit_id = &summary.commits[i].0;
-                if let Some(author) = author_map.get(commit_id) {
+            for commit in &mut summary.commits {
+                if let Some(author) = author_map.get(&commit.commit_id) {
                     if let Some(author_info) = author {
-                        log::debug!("Adding author information for commit {}: {}", commit_id, author_info.name);
-                        summary.commits[i].2 = Some(author_info.clone());
+                        log::debug!("Adding author information for commit {}: {}", commit.commit_id, author_info.name);
+                        commit.author = Some(author_info.clone());
                     }
                 }
             }

@@ -1,6 +1,6 @@
 use clap::Parser;
 use semver::Version;
-use vnext::version::{CommitAuthor, ChangesetSummary};
+use vnext::version::{Commit, CommitAuthor, ChangesetSummary};
 use vnext::changelog::RepoInfo;
 
 #[test]
@@ -14,11 +14,9 @@ fn test_changelog_with_author_info() {
         email: "john@example.com".to_string(),
         username: Some("johndoe".to_string()),
     };
-    summary.commits.push((
-        "abc123".to_string(),
-        "feat: Add new feature".to_string(),
-        Some(author1),
-    ));
+    let mut commit1 = Commit::parse("abc123".to_string(), "feat: Add new feature".to_string());
+    commit1.author = Some(author1);
+    summary.commits.push(commit1);
 
     // Add a commit with author information but no username
     let author2 = CommitAuthor {
@@ -26,18 +24,13 @@ fn test_changelog_with_author_info() {
         email: "jane@example.com".to_string(),
         username: None,
     };
-    summary.commits.push((
-        "def456".to_string(),
-        "fix: Fix a bug".to_string(),
-        Some(author2),
-    ));
+    let mut commit2 = Commit::parse("def456".to_string(), "fix: Fix a bug".to_string());
+    commit2.author = Some(author2);
+    summary.commits.push(commit2);
 
     // Add a commit without author information
-    summary.commits.push((
-        "ghi789".to_string(),
-        "chore: Update dependencies".to_string(),
-        None,
-    ));
+    let commit3 = Commit::parse("ghi789".to_string(), "chore: Update dependencies".to_string());
+    summary.commits.push(commit3);
 
     // Format the changelog
     let version = Version::new(1, 0, 0);
@@ -87,9 +80,8 @@ fn test_github_detection_behavior() {
 
     // Create a test summary with commits
     let mut summary = ChangesetSummary::new();
-    summary
-        .commits
-        .push(("abc123".to_string(), "feat: Add feature".to_string(), None));
+    let commit = Commit::parse("abc123".to_string(), "feat: Add feature".to_string());
+    summary.commits.push(commit);
 
     // Create a test author
     let author = CommitAuthor {
@@ -100,11 +92,9 @@ fn test_github_detection_behavior() {
 
     // Test with GitHub author information
     let mut summary_with_github = ChangesetSummary::new();
-    summary_with_github.commits.push((
-        "abc123".to_string(),
-        "feat: Add feature".to_string(),
-        Some(author.clone()),
-    ));
+    let mut commit_with_author = Commit::parse("abc123".to_string(), "feat: Add feature".to_string());
+    commit_with_author.author = Some(author.clone());
+    summary_with_github.commits.push(commit_with_author);
 
     let current_version = Version::new(0, 9, 0);
     let repo_info = RepoInfo::new(); // Empty repo info for tests
@@ -181,9 +171,8 @@ fn test_github_detection_from_remote() {
 
     // Create a test summary
     let mut summary = vnext::version::ChangesetSummary::new();
-    summary
-        .commits
-        .push(("abc123".to_string(), "feat: Add feature".to_string(), None));
+    let commit = vnext::version::Commit::parse("abc123".to_string(), "feat: Add feature".to_string());
+    summary.commits.push(commit);
 
     // Test that GitHub detection works by checking if GitHub author information is fetched
     // Note: This test doesn't actually fetch from GitHub API, but verifies the detection logic

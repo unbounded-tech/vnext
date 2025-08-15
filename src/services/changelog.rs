@@ -22,60 +22,35 @@ pub fn format_changelog(
         // Reverse the commits to display them in chronological order (oldest first)
         let mut commits = summary.commits.clone();
         commits.reverse();
-        for (_, message, author) in &commits {
-            // Format the message to preserve newlines but add bullet point to first line
-            let mut lines = message.lines();
-            if let Some(first_line) = lines.next() {
-                // Add author information if available
-                let line_with_author = if let Some(author_info) = author {
-                    if let Some(username) = &author_info.username {
-                        format!("* {} (by @{})\n", first_line, username)
-                    } else {
-                        format!("* {} (by {})\n", first_line, author_info.name)
-                    }
+        for commit in &commits {
+            // Format the first line with the commit title
+            let first_line = if let Some(scope) = &commit.scope {
+                format!("* {}({}): {}", commit.commit_type, scope, commit.title)
+            } else {
+                format!("* {}: {}", commit.commit_type, commit.title)
+            };
+            
+            // Add author information if available
+            let line_with_author = if let Some(author_info) = &commit.author {
+                if let Some(username) = &author_info.username {
+                    format!("{} (by @{})\n", first_line, username)
                 } else {
-                    format!("* {}\n", first_line)
-                };
-                
-                changelog.push_str(&line_with_author);
-                
-                // Add any remaining lines with proper indentation
-                let remaining_lines: Vec<&str> = lines.collect();
-                
-                // If there are remaining lines, add an empty line and then the indented body
-                if !remaining_lines.is_empty() {
-                    // Skip leading empty lines
-                    let mut start_index = 0;
-                    while start_index < remaining_lines.len() && remaining_lines[start_index].is_empty() {
-                        start_index += 1;
-                    }
-                    
-                    if start_index < remaining_lines.len() {
-                        changelog.push('\n');
-                        
-                        for line in &remaining_lines[start_index..] {
-                            if line.is_empty() {
-                                changelog.push('\n');
-                            } else {
-                                let processed_line = if !no_header_scaling {
-                                    // Scale down headers in commit body (h1->h4, h2->h5, h3->h6)
-                                    if line.starts_with("# ") {
-                                        format!("#### {}", &line[2..])
-                                    } else if line.starts_with("## ") {
-                                        format!("##### {}", &line[3..])
-                                    } else if line.starts_with("### ") {
-                                        format!("###### {}", &line[4..])
-                                    } else {
-                                        line.to_string()
-                                    }
-                                } else {
-                                    // No header scaling
-                                    line.to_string()
-                                };
-                                changelog.push_str(&format!("  {}\n", processed_line));
-                            }
-                        }
-                    }
+                    format!("{} (by {})\n", first_line, author_info.name)
+                }
+            } else {
+                format!("{}\n", first_line)
+            };
+            
+            changelog.push_str(&line_with_author);
+            
+            // Add the commit body if present
+            if let Some(body) = &commit.body {
+                // Format the body with proper indentation and header scaling
+                let formatted_body = format_commit_body(body, no_header_scaling);
+                if !formatted_body.is_empty() {
+                    // Add a single newline before the body
+                    changelog.push_str("\n");
+                    changelog.push_str(&formatted_body);
                 }
             }
         }
@@ -89,6 +64,42 @@ pub fn format_changelog(
     }
     
     changelog
+}
+
+/// Format a commit body with proper indentation and header scaling
+fn format_commit_body(body: &str, no_header_scaling: bool) -> String {
+    let mut formatted = String::new();
+    let lines: Vec<&str> = body.lines().collect();
+    
+    // Process each line
+    for (i, line) in lines.iter().enumerate() {
+        if line.is_empty() {
+            // Only add a newline for empty lines if it's not the first line
+            if i > 0 {
+                formatted.push('\n');
+            }
+        } else {
+            let processed_line = if !no_header_scaling {
+                // Scale down headers in commit body (h1->h4, h2->h5, h3->h6)
+                if line.starts_with("# ") {
+                    format!("#### {}", &line[2..])
+                } else if line.starts_with("## ") {
+                    format!("##### {}", &line[3..])
+                } else if line.starts_with("### ") {
+                    format!("###### {}", &line[4..])
+                } else {
+                    line.to_string()
+                }
+            } else {
+                // No header scaling
+                line.to_string()
+            };
+            formatted.push_str(&format!("  {}\n", processed_line));
+        }
+    }
+    
+    // Remove trailing newlines to match expected format
+    formatted.trim_end().to_string()
 }
 
 /// Output the result of the version calculation

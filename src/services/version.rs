@@ -60,24 +60,27 @@ pub fn calculate_version_bump(
     // Iterate commits (newest first). We collect and then reverse for changelog display.
     for oid in revwalk {
         let oid = oid?;
-        let commit = repo.find_commit(oid)?;
-        let message = commit.message().unwrap_or("").to_string();
-
-        // Decide bump level
-        if breaking_re.is_match(&message) || major_re.is_match(&message) {
+        let git_commit = repo.find_commit(oid)?;
+        let message = git_commit.message().unwrap_or("").to_string();
+        
+        // Parse the commit message
+        let commit = crate::models::commit::Commit::parse(oid.to_string(), message);
+        
+        // Determine version bump based on commit type and breaking changes
+        if commit.is_major_change() || major_re.is_match(&commit.raw_message) || breaking_re.is_match(&commit.raw_message) {
             bump.major = true;
             summary.major += 1;
-        } else if minor_re.is_match(&message) {
+        } else if commit.is_minor_change() || minor_re.is_match(&commit.raw_message) {
             bump.minor = true;
             summary.minor += 1;
-        } else if !noop_re.is_match(&message) {
+        } else if commit.is_patch_change() || !noop_re.is_match(&commit.raw_message) {
             bump.patch = true;
             summary.patch += 1;
         } else {
             summary.noop += 1;
         }
-
-        summary.commits.push((oid.to_string(), message, None));
+        
+        summary.commits.push(commit);
     }
 
     Ok((bump, summary))
