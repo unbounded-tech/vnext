@@ -182,7 +182,7 @@ fn version_tests() {
     
     let changelog = changelog.trim_end().to_string(); // Remove trailing newlines
     let expected_changelog = format!(
-        "### What's changed in v2.1.1\n\n* chore: noop\n* chore: noop\n* non-conventional: bump"
+        "### What's changed in v2.1.1\n\n* chore: noop\n\n* chore: noop\n\n* non-conventional: bump"
     );
     assert_eq!(
         changelog, expected_changelog,

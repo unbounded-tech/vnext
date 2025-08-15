@@ -18,6 +18,8 @@ pub struct ParsedCommit {
 
 /// Parse a conventional commit message into its components
 pub fn parse_conventional_commit(message: &str) -> Option<ParsedCommit> {
+
+    log::debug!("Conventional Commit Parser - Message: {}", message);
     // Master regex for the entire commit message including header and body
     // Format: type(scope)?!?: title\n*(BREAKING CHANGE:)?\s?([\s\S]*)
     let commit_regex = Regex::new(CONVENTIONAL_COMMIT_REGEX_STR).ok()?;

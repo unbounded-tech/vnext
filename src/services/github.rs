@@ -23,8 +23,8 @@ pub fn enhance_with_github_info(
     // Fetch author information from GitHub API
     match fetch_commit_authors(&repo_info.owner, &repo_info.name, &commit_ids) {
         Ok(authors) => {
-            log::debug!("Successfully fetched author information for {} commits", authors.len());
-            
+            log::debug!("Attempted to retrieve author information for {} commits", authors.len());
+            log::debug!("Found authors for {} commits", authors.iter().filter(|(_, author)| author.is_some()).count());
             // Create a map of commit IDs to authors
             let mut author_map = HashMap::new();
             for (commit_id, author) in authors {

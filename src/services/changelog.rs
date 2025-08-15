@@ -58,14 +58,17 @@ pub fn format_changelog(
                     // Add a single newline before the body
                     changelog.push_str("\n");
                     changelog.push_str(&formatted_body);
+                    changelog.push('\n');
                 }
             }
+
+            changelog.push_str("\n");
         }
     }
     
     // Add comparison link if it's a GitHub repository and current version is not 0.0.0
     if repo_info.is_github_repo && (current_version.major > 0 || current_version.minor > 0 || current_version.patch > 0) {
-        changelog.push_str("\n\n");
+        changelog.push('\n');
         changelog.push_str(&format!("See full diff: [v{}...v{}](https://github.com/{}/{}/compare/v{}...v{})",
             current_version, next_version, repo_info.owner, repo_info.name, current_version, next_version));
     }
