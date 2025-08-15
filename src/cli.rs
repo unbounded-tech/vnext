@@ -1,6 +1,11 @@
-use clap::{Parser, Subcommand};
-use crate::regex::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
+//! CLI interface definition
 
+use clap::{Parser, Subcommand};
+use crate::utils::regex::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR};
+use crate::commands;
+use crate::models::error::VNextError;
+
+/// CLI for calculating the next version based on conventional commits
 #[derive(Parser, Debug)]
 #[clap(author, version, about = "Calculate the next version based on conventional commits")]
 pub struct Cli {
@@ -37,6 +42,7 @@ pub struct Cli {
     pub command: Option<Commands>,
 }
 
+/// CLI subcommands
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Generate a deploy key for GitHub repository
@@ -59,6 +65,30 @@ pub enum Commands {
     },
 }
 
+/// Parse command line arguments
 pub fn parse_cli() -> Cli {
     Cli::parse()
+}
+
+/// Run the CLI
+pub fn run(cli: Cli) -> Result<(), VNextError> {
+    // Check if a subcommand was provided
+    if let Some(command) = &cli.command {
+        match command {
+            Commands::GenerateDeployKey { owner, name, key_name, overwrite } => {
+                return commands::deploy_key::generate_deploy_key(owner.clone(), name.clone(), key_name.clone(), *overwrite);
+            }
+        }
+    }
+    
+    // If no subcommand was provided, run the default vnext calculation logic
+    commands::vnext::run_vnext_command(
+        &cli.major,
+        &cli.minor,
+        &cli.noop,
+        &cli.breaking,
+        cli.changelog,
+        cli.no_header_scaling,
+        cli.current,
+    )
 }

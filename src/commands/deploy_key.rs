@@ -1,43 +1,15 @@
-use crate::changelog;
-use crate::error::VNextError;
-use crate::git;
+//! Deploy key command implementation
+
+use crate::models::error::VNextError;
+use crate::models::deploy_key::{DeployKeyResponse, DeployKeyList, SecretList};
+use crate::services::git;
 use log::info;
 use reqwest::blocking::Client;
-use serde::{Deserialize, Serialize};
+use serde_json;
 use std::fs::{self, create_dir_all};
 use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct DeployKeyResponse {
-    id: u64,
-    key: String,
-    url: String,
-    title: String,
-    verified: bool,
-    created_at: String,
-    read_only: bool,
-}
-
-/// Represents a list of deploy keys
-#[derive(Serialize, Deserialize, Debug)]
-struct DeployKeyList(Vec<DeployKeyResponse>);
-
-/// Represents a list of repository secrets
-#[derive(Serialize, Deserialize, Debug)]
-struct SecretList {
-    total_count: u64,
-    secrets: Vec<Secret>,
-}
-
-/// Represents a repository secret
-#[derive(Serialize, Deserialize, Debug)]
-struct Secret {
-    name: String,
-    created_at: String,
-    updated_at: String,
-}
 
 /// Prompt user for input with a default value
 fn prompt_with_default(prompt: &str, default: &str) -> Result<String, VNextError> {
@@ -230,7 +202,7 @@ pub fn generate_deploy_key(
     // Try to detect current repository information
     let (detected_owner, detected_name) = match git::open_repository() {
         Ok(repo) => {
-            let repo_info = changelog::get_repo_info(&repo);
+            let repo_info = git::get_repo_info(&repo);
             if repo_info.is_github_repo && !repo_info.owner.is_empty() && !repo_info.name.is_empty() {
                 info!("Detected GitHub repository: {}/{}", repo_info.owner, repo_info.name);
                 (Some(repo_info.owner), Some(repo_info.name))
