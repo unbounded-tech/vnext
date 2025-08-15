@@ -33,12 +33,14 @@
 //! ## Custom Regex
 //!
 //! The custom regex parser uses regular expressions to determine the type of change
-//! represented by a commit message. It uses four regex patterns:
+//! represented by a commit message. It uses six regex patterns:
 //!
 //! - `major_pattern`: Matches commits that trigger a major version bump
 //! - `minor_pattern`: Matches commits that trigger a minor version bump
 //! - `noop_pattern`: Matches commits that should not trigger a version bump
 //! - `breaking_pattern`: Matches commits that indicate a breaking change
+//! - `type_pattern`: Extracts the commit type from the message
+//! - `scope_pattern`: Extracts the scope from the message
 //!
 //! # Usage
 //!
@@ -55,12 +57,18 @@
 //!     minor_pattern: r"(?m)^(minor|feat)(\(.+\))?:.*".to_string(),
 //!     noop_pattern: r"(?m)^(noop|chore)(\(.+\))?:.*".to_string(),
 //!     breaking_pattern: r"(?s)^[^\n]*\n\nBREAKING CHANGE:.*".to_string(),
+//!     type_pattern: r"^([\w-]+)((.*))?:".to_string(),
+//!     scope_pattern: r"^[\w-]+\((.*)\)!?:".to_string(),
 //! });
 //!
-//! // Use the parser to determine the type of change
-//! let is_major = parser.is_major_change("feat!: Breaking change");
-//! let is_minor = parser.is_minor_change("feat: Add new feature");
-//! let is_noop = parser.is_noop_change("chore: Update dependencies");
+//! // Parse commits and check their change types
+//! let commit1 = parser.parse_commit("abc123".to_string(), "feat!: Breaking change".to_string());
+//! let commit2 = parser.parse_commit("def456".to_string(), "feat: Add new feature".to_string());
+//! let commit3 = parser.parse_commit("ghi789".to_string(), "chore: Update dependencies".to_string());
+//!
+//! let is_major = commit1.is_major_change();
+//! let is_minor = commit2.is_minor_change();
+//! let is_noop = commit3.is_noop_change();
 //! ```
 
 // Conventional commit parser
