@@ -1,4 +1,17 @@
 use vnext::models::commit::CommitParser;
+
+// Default commit types for testing
+fn default_major_types() -> Vec<&'static str> {
+    vec!["major"]
+}
+
+fn default_minor_types() -> Vec<&'static str> {
+    vec!["feat", "minor"]
+}
+
+fn default_noop_types() -> Vec<&'static str> {
+    vec!["chore", "noop"]
+}
 use vnext::parsers::{
     ConventionalCommitParser,
     CustomRegexParser,
@@ -21,37 +34,36 @@ fn test_conventional_commit_parser() {
     let major_commit2 = parser.parse_commit("test2".to_string(), "feat: Add new feature\n\nBREAKING CHANGE: This breaks the old API.".to_string());
     let major_commit3 = parser.parse_commit("test3".to_string(), "major: This is a major change".to_string());
     
-    assert!(major_commit1.is_major_change());
-    assert!(major_commit2.is_major_change());
-    assert!(major_commit3.is_major_change());
+    assert!(major_commit1.is_major_change(&default_major_types()));
+    assert!(major_commit2.is_major_change(&default_major_types()));
+    assert!(major_commit3.is_major_change(&default_major_types()));
     
     // Test minor changes
     let minor_commit1 = parser.parse_commit("test4".to_string(), "feat: Add new feature".to_string());
     let minor_commit2 = parser.parse_commit("test5".to_string(), "minor: This is a minor change".to_string());
     let not_minor_commit = parser.parse_commit("test6".to_string(), "fix: Fix a bug".to_string());
     
-    assert!(minor_commit1.is_minor_change());
-    assert!(minor_commit2.is_minor_change());
-    assert!(!not_minor_commit.is_minor_change());
+    assert!(minor_commit1.is_minor_change(&default_minor_types()));
+    assert!(minor_commit2.is_minor_change(&default_minor_types()));
+    assert!(!not_minor_commit.is_minor_change(&default_minor_types()));
     
     // Test no-op changes
     let noop_commit1 = parser.parse_commit("test7".to_string(), "chore: Update dependencies".to_string());
     let noop_commit2 = parser.parse_commit("test8".to_string(), "noop: This is a no-op change".to_string());
     let not_noop_commit = parser.parse_commit("test9".to_string(), "feat: Add new feature".to_string());
     
-    assert!(noop_commit1.is_noop_change());
-    assert!(noop_commit2.is_noop_change());
-    assert!(!not_noop_commit.is_noop_change());
+    assert!(noop_commit1.is_noop_change(&default_noop_types()));
+    assert!(noop_commit2.is_noop_change(&default_noop_types()));
+    assert!(!not_noop_commit.is_noop_change(&default_noop_types()));
     
     // Test breaking changes
     let breaking_commit1 = parser.parse_commit("test10".to_string(), "feat!: Breaking change".to_string());
     let breaking_commit2 = parser.parse_commit("test11".to_string(), "feat: Add new feature\n\nBREAKING CHANGE: This breaks the old API.".to_string());
     let not_breaking_commit = parser.parse_commit("test12".to_string(), "feat: Add new feature".to_string());
     
-    assert!(breaking_commit1.breaking_change_flag);
-    assert!(breaking_commit2.breaking_change_body);
-    assert!(!not_breaking_commit.breaking_change_flag);
-    assert!(!not_breaking_commit.breaking_change_body);
+    assert!(breaking_commit1.has_breaking_change);
+    assert!(breaking_commit2.has_breaking_change);
+    assert!(!not_breaking_commit.has_breaking_change);
     
     // Test parsing a commit
     let commit = parser.parse_commit("abc123".to_string(), "feat(ui): Add new button\n\nThis adds a new button to the UI.".to_string());
@@ -60,8 +72,7 @@ fn test_conventional_commit_parser() {
     assert_eq!(commit.scope, Some("ui".to_string()));
     assert_eq!(commit.title, "Add new button");
     assert_eq!(commit.body, Some("This adds a new button to the UI.".to_string()));
-    assert!(!commit.breaking_change_flag);
-    assert!(!commit.breaking_change_body);
+    assert!(!commit.has_breaking_change);
 }
 
 #[test]
@@ -73,34 +84,34 @@ fn test_custom_regex_parser() {
     let major_commit2 = parser.parse_commit("test2".to_string(), "feat: Add new feature\n\nBREAKING CHANGE: This breaks the old API.".to_string());
     let not_major_commit = parser.parse_commit("test3".to_string(), "feat: Add new feature".to_string());
     
-    assert!(major_commit1.is_major_change());
-    assert!(major_commit2.is_major_change());
-    assert!(!not_major_commit.is_major_change());
+    assert!(major_commit1.is_major_change(&default_major_types()));
+    assert!(major_commit2.is_major_change(&default_major_types()));
+    assert!(!not_major_commit.is_major_change(&default_major_types()));
     
     // Test minor changes
     let minor_commit1 = parser.parse_commit("test4".to_string(), "feat: Add new feature".to_string());
     let minor_commit2 = parser.parse_commit("test5".to_string(), "minor: This is a minor change".to_string());
     let not_minor_commit = parser.parse_commit("test6".to_string(), "fix: Fix a bug".to_string());
     
-    assert!(minor_commit1.is_minor_change());
-    assert!(minor_commit2.is_minor_change());
-    assert!(!not_minor_commit.is_minor_change());
+    assert!(minor_commit1.is_minor_change(&default_minor_types()));
+    assert!(minor_commit2.is_minor_change(&default_minor_types()));
+    assert!(!not_minor_commit.is_minor_change(&default_minor_types()));
     
     // Test no-op changes
     let noop_commit1 = parser.parse_commit("test7".to_string(), "chore: Update dependencies".to_string());
     let noop_commit2 = parser.parse_commit("test8".to_string(), "noop: This is a no-op change".to_string());
     let not_noop_commit = parser.parse_commit("test9".to_string(), "feat: Add new feature".to_string());
     
-    assert!(noop_commit1.is_noop_change());
-    assert!(noop_commit2.is_noop_change());
-    assert!(!not_noop_commit.is_noop_change());
+    assert!(noop_commit1.is_noop_change(&default_noop_types()));
+    assert!(noop_commit2.is_noop_change(&default_noop_types()));
+    assert!(!not_noop_commit.is_noop_change(&default_noop_types()));
     
     // Test breaking changes
     let breaking_commit = parser.parse_commit("test10".to_string(), "feat: Add new feature\n\nBREAKING CHANGE: This breaks the old API.".to_string());
     let not_breaking_commit = parser.parse_commit("test11".to_string(), "feat: Add new feature".to_string());
     
-    assert!(breaking_commit.breaking_change_flag);
-    assert!(!not_breaking_commit.breaking_change_flag);
+    assert!(breaking_commit.has_breaking_change);
+    assert!(!not_breaking_commit.has_breaking_change);
     
     // Test parsing a commit
     let commit = parser.parse_commit("abc123".to_string(), "feat(ui): Add new button\n\nThis adds a new button to the UI.".to_string());
@@ -132,17 +143,17 @@ fn test_custom_regex_parser() {
     let custom_breaking = custom_parser.parse_commit("test18".to_string(), "custom-breaking: This is a breaking change".to_string());
     let not_custom_breaking = custom_parser.parse_commit("test19".to_string(), "BREAKING CHANGE: This is a breaking change".to_string());
     
-    assert!(custom_major.is_major_change());
-    assert!(!not_custom_major.is_major_change());
+    assert!(custom_major.is_major_change(&default_major_types()));
+    assert!(!not_custom_major.is_major_change(&default_major_types()));
     
-    assert!(custom_minor.is_minor_change());
-    assert!(!not_custom_minor.is_minor_change());
+    assert!(custom_minor.is_minor_change(&default_minor_types()));
+    assert!(!not_custom_minor.is_minor_change(&default_minor_types()));
     
-    assert!(custom_noop.is_noop_change());
-    assert!(!not_custom_noop.is_noop_change());
+    assert!(custom_noop.is_noop_change(&default_noop_types()));
+    assert!(!not_custom_noop.is_noop_change(&default_noop_types()));
     
-    assert!(custom_breaking.breaking_change_flag);
-    assert!(!not_custom_breaking.breaking_change_flag);
+    assert!(custom_breaking.has_breaking_change);
+    assert!(!not_custom_breaking.has_breaking_change);
 }
 
 #[test]
@@ -179,8 +190,8 @@ fn test_parser_factory() {
     let conv_commit = conventional_parser.parse_commit("test20".to_string(), commit_message.to_string());
     let custom_commit = custom_parser.parse_commit("test21".to_string(), commit_message.to_string());
     
-    assert!(conv_commit.is_minor_change());
-    assert!(custom_commit.is_minor_change());
+    assert!(conv_commit.is_minor_change(&default_minor_types()));
+    assert!(custom_commit.is_minor_change(&default_minor_types()));
 }
 
 #[test]
@@ -203,35 +214,35 @@ fn test_integration_with_version_calculation() {
     let conv_major = conventional_parser.parse_commit("test22".to_string(), major_message.to_string());
     let custom_major = custom_parser.parse_commit("test23".to_string(), major_message.to_string());
     
-    assert!(conv_major.is_major_change());
-    assert!(!custom_major.is_major_change()); // Custom parser doesn't recognize ! as breaking
+    assert!(conv_major.is_major_change(&default_major_types()));
+    assert!(!custom_major.is_major_change(&default_major_types())); // Custom parser doesn't recognize ! as breaking
     
     // Test with a minor change
     let minor_message = "feat: Add new feature";
     let conv_minor = conventional_parser.parse_commit("test24".to_string(), minor_message.to_string());
     let custom_minor = custom_parser.parse_commit("test25".to_string(), minor_message.to_string());
     
-    assert!(conv_minor.is_minor_change());
-    assert!(custom_minor.is_minor_change());
+    assert!(conv_minor.is_minor_change(&default_minor_types()));
+    assert!(custom_minor.is_minor_change(&default_minor_types()));
     
     // Test with a patch change
     let patch_message = "fix: Fix a bug";
     let conv_patch = conventional_parser.parse_commit("test26".to_string(), patch_message.to_string());
     let custom_patch = custom_parser.parse_commit("test27".to_string(), patch_message.to_string());
     
-    assert!(!conv_patch.is_major_change());
-    assert!(!conv_patch.is_minor_change());
-    assert!(!conv_patch.is_noop_change());
+    assert!(!conv_patch.is_major_change(&default_major_types()));
+    assert!(!conv_patch.is_minor_change(&default_minor_types()));
+    assert!(!conv_patch.is_noop_change(&default_noop_types()));
     
-    assert!(!custom_patch.is_major_change());
-    assert!(!custom_patch.is_minor_change());
-    assert!(!custom_patch.is_noop_change());
+    assert!(!custom_patch.is_major_change(&default_major_types()));
+    assert!(!custom_patch.is_minor_change(&default_minor_types()));
+    assert!(!custom_patch.is_noop_change(&default_noop_types()));
     
     // Test with a no-op change
     let noop_message = "chore: Update dependencies";
     let conv_noop = conventional_parser.parse_commit("test28".to_string(), noop_message.to_string());
     let custom_noop = custom_parser.parse_commit("test29".to_string(), noop_message.to_string());
     
-    assert!(conv_noop.is_noop_change());
-    assert!(custom_noop.is_noop_change());
+    assert!(conv_noop.is_noop_change(&default_noop_types()));
+    assert!(custom_noop.is_noop_change(&default_noop_types()));
 }

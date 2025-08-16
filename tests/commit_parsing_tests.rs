@@ -1,4 +1,17 @@
 use vnext::models::commit::Commit;
+
+// Default commit types for testing
+fn default_major_types() -> Vec<&'static str> {
+    vec!["major"]
+}
+
+fn default_minor_types() -> Vec<&'static str> {
+    vec!["feat", "minor"]
+}
+
+fn default_noop_types() -> Vec<&'static str> {
+    vec!["chore", "noop"]
+}
 use vnext::parsers::conventional::parse_conventional_commit;
 
 #[test]
@@ -92,28 +105,27 @@ fn test_commit_struct() {
     assert_eq!(commit.raw_message, "feat: Add new feature");
     assert_eq!(commit.commit_type, "feat");
     assert!(commit.scope.is_none());
-    assert!(!commit.breaking_change_flag);
+    assert!(!commit.has_breaking_change);
     assert_eq!(commit.title, "Add new feature");
     assert!(commit.body.is_none());
-    assert!(!commit.breaking_change_body);
     assert!(commit.author.is_none());
     
     // Test is_major_change
     let commit = Commit::parse("abc123".to_string(), "feat!: Breaking change".to_string());
-    assert!(commit.is_major_change());
+    assert!(commit.is_major_change(&default_major_types()));
     
     let commit = Commit::parse("abc123".to_string(), "feat: Add new feature\n\nBREAKING CHANGE: This breaks the old API.".to_string());
-    assert!(commit.is_major_change());
+    assert!(commit.is_major_change(&default_major_types()));
     
     // Test is_minor_change
     let commit = Commit::parse("abc123".to_string(), "feat: Add new feature".to_string());
-    assert!(commit.is_minor_change());
+    assert!(commit.is_minor_change(&default_minor_types()));
     
     // Test is_patch_change
     let commit = Commit::parse("abc123".to_string(), "fix: Fix bug".to_string());
-    assert!(commit.is_patch_change());
+    assert!(commit.is_patch_change(&default_major_types(), &default_minor_types(), &default_noop_types()));
     
     // Test is_noop_change
     let commit = Commit::parse("abc123".to_string(), "chore: Update dependencies".to_string());
-    assert!(commit.is_noop_change());
+    assert!(commit.is_noop_change(&default_noop_types()));
 }
