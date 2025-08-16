@@ -97,7 +97,7 @@ impl CommitParser for CustomRegexParser {
         let is_noop = self.noop_regex.is_match(&message);
         
         // Set breaking change flag
-        commit.breaking_change_flag = is_breaking;
+        commit.has_breaking_change = is_breaking;
                 
         // Log information about the commit type for debugging
         if is_breaking || is_major {
