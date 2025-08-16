@@ -9,11 +9,10 @@ use crate::parsers::{ParserFactory, ParserStrategy};
 /// Run the vnext command
 pub fn run_vnext_command(
     parser_name: &str,
-    major_pattern: &str,
-    minor_pattern: &str,
-    noop_pattern: &str,
     breaking_pattern: &str,
     type_pattern: &str,
+    title_pattern: &str,
+    body_pattern: &str,
     scope_pattern: &str,
     major_commit_types: &str,
     minor_commit_types: &str,
@@ -43,11 +42,10 @@ pub fn run_vnext_command(
         "custom" => {
             log::debug!("Selected custom regex parser strategy");
             ParserStrategy::CustomRegex {
-                major_pattern: major_pattern.to_string(),
-                minor_pattern: minor_pattern.to_string(),
-                noop_pattern: noop_pattern.to_string(),
+                commit_type_pattern: type_pattern.to_string(),
+                title_pattern: title_pattern.to_string(),
+                body_pattern: body_pattern.to_string(),
                 breaking_pattern: breaking_pattern.to_string(),
-                type_pattern: type_pattern.to_string(),
                 scope_pattern: scope_pattern.to_string(),
             }
         },

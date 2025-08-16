@@ -24,16 +24,16 @@ pub enum ParserStrategy {
     ///
     /// # Fields
     ///
-    /// * `major_pattern` - Regex pattern for commits that trigger a major version bump
-    /// * `minor_pattern` - Regex pattern for commits that trigger a minor version bump
-    /// * `noop_pattern` - Regex pattern for commits that should not trigger a version bump
+    /// * `commit_type_pattern` - Regex pattern for extracting commit type
+    /// * `title_pattern` - Regex pattern for extracting commit title
+    /// * `body_pattern` - Regex pattern for extracting commit body
     /// * `breaking_pattern` - Regex pattern for commits that indicate a breaking change
+    /// * `scope_pattern` - Regex pattern for extracting commit scope
     CustomRegex {
-        major_pattern: String,
-        minor_pattern: String,
-        noop_pattern: String,
+        commit_type_pattern: String,
+        title_pattern: String,
+        body_pattern: String,
         breaking_pattern: String,
-        type_pattern: String,
         scope_pattern: String,
     },
 }
@@ -73,27 +73,24 @@ impl ParserFactory {
                 Box::new(ConventionalCommitParser::new())
             },
             ParserStrategy::CustomRegex {
-                major_pattern,
-                minor_pattern,
-                noop_pattern,
+                commit_type_pattern,
+                title_pattern,
+                body_pattern,
                 breaking_pattern,
-                type_pattern,
                 scope_pattern
             } => {
                 log::debug!("Using custom regex parser with patterns:");
-                log::debug!("  Major pattern: {}", major_pattern);
-                log::debug!("  Minor pattern: {}", minor_pattern);
-                log::debug!("  No-op pattern: {}", noop_pattern);
+                log::debug!("  Commit type pattern: {}", commit_type_pattern);
+                log::debug!("  Title pattern: {}", title_pattern);
+                log::debug!("  Body pattern: {}", body_pattern);
                 log::debug!("  Breaking pattern: {}", breaking_pattern);
-                log::debug!("  Type pattern: {}", type_pattern);
                 log::debug!("  Scope pattern: {}", scope_pattern);
                 
                 match CustomRegexParser::new(
-                    major_pattern,
-                    minor_pattern,
-                    noop_pattern,
+                    commit_type_pattern,
+                    title_pattern,
+                    body_pattern,
                     breaking_pattern,
-                    type_pattern,
                     scope_pattern
                 ) {
                     Ok(parser) => Box::new(parser),
@@ -101,11 +98,10 @@ impl ParserFactory {
                         // Fall back to default patterns if custom patterns are invalid
                         log::warn!("Invalid regex patterns, falling back to defaults: {}", e);
                         log::debug!("Using default regex patterns:");
-                        log::debug!("  Major pattern: {}", crate::parsers::custom::MAJOR_REGEX_STR);
-                        log::debug!("  Minor pattern: {}", crate::parsers::custom::MINOR_REGEX_STR);
-                        log::debug!("  No-op pattern: {}", crate::parsers::custom::NOOP_REGEX_STR);
+                        log::debug!("  Commit type pattern: {}", crate::parsers::custom::COMMIT_TYPE_REGEX_STR);
+                        log::debug!("  Title pattern: {}", crate::parsers::custom::TITLE_REGEX_STR);
+                        log::debug!("  Body pattern: {}", crate::parsers::custom::BODY_REGEX_STR);
                         log::debug!("  Breaking pattern: {}", crate::parsers::custom::BREAKING_REGEX_STR);
-                        log::debug!("  Type pattern: {}", crate::parsers::custom::TYPE_REGEX_STR);
                         log::debug!("  Scope pattern: {}", crate::parsers::custom::SCOPE_REGEX_STR);
                         Box::new(CustomRegexParser::default())
                     }

@@ -3,7 +3,7 @@
 use clap::{Parser, Subcommand};
 use crate::commands;
 use crate::models::error::VNextError;
-use crate::parsers::custom::{MAJOR_REGEX_STR, MINOR_REGEX_STR, NOOP_REGEX_STR, BREAKING_REGEX_STR, TYPE_REGEX_STR, SCOPE_REGEX_STR};
+use crate::parsers::custom::{COMMIT_TYPE_REGEX_STR, TITLE_REGEX_STR, BODY_REGEX_STR, BREAKING_REGEX_STR, SCOPE_REGEX_STR};
 
 /// CLI for calculating the next version based on conventional commits
 #[derive(Parser, Debug)]
@@ -13,25 +13,22 @@ pub struct Cli {
     #[clap(long, default_value = "conventional")]
     pub parser: String,
 
-    /// Regex for commits triggering a major version bump (used with custom parser)
-    #[clap(long, default_value = MAJOR_REGEX_STR)]
-    pub major: String,
 
-    /// Regex for commits triggering a minor version bump (used with custom parser)
-    #[clap(long, default_value = MINOR_REGEX_STR)]
-    pub minor: String,
-
-    /// Regex for commits that should not trigger a version bump (used with custom parser)
-    #[clap(long, default_value = NOOP_REGEX_STR)]
-    pub noop: String,
-
-    /// Regex for commits indicating a breaking change (used with custom parser)
+    /// Regex pattern for commits indicating a breaking change (used with custom parser)
     #[clap(long, default_value = BREAKING_REGEX_STR)]
-    pub breaking: String,
+    pub breaking_pattern: String,
 
     /// Regex for extracting commit type from message (used with custom parser)
-    #[clap(long, default_value = TYPE_REGEX_STR)]
+    #[clap(long, default_value = COMMIT_TYPE_REGEX_STR)]
     pub type_pattern: String,
+
+    /// Regex for extracting commit title from message (used with custom parser)
+    #[clap(long, default_value = TITLE_REGEX_STR)]
+    pub title_pattern: String,
+
+    /// Regex for extracting commit body from message (used with custom parser)
+    #[clap(long, default_value = BODY_REGEX_STR)]
+    pub body_pattern: String,
 
     /// Regex for extracting commit scope from message (used with custom parser)
     #[clap(long, default_value = SCOPE_REGEX_STR)]
@@ -108,11 +105,10 @@ pub fn run(cli: Cli) -> Result<(), VNextError> {
     // If no subcommand was provided, run the default vnext calculation logic
     commands::vnext::run_vnext_command(
         &cli.parser,
-        &cli.major,
-        &cli.minor,
-        &cli.noop,
-        &cli.breaking,
+        &cli.breaking_pattern,
         &cli.type_pattern,
+        &cli.title_pattern,
+        &cli.body_pattern,
         &cli.scope_pattern,
         &cli.major_commit_types,
         &cli.minor_commit_types,
