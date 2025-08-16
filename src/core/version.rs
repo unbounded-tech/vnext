@@ -7,6 +7,40 @@ use crate::models::version::VersionBump;
 use crate::models::changeset::ChangesetSummary;
 use log::debug;
 
+/// Enum representing the type of version bump
+#[derive(Debug, PartialEq)]
+pub enum VersionBumpType {
+    Major,
+    Minor,
+    Patch,
+    NoOp,
+}
+
+/// Determine the type of version bump for a commit based on configurable commit types
+pub fn determine_version_bump(
+    commit: &crate::models::commit::Commit,
+    major_types: &[&str],
+    minor_types: &[&str],
+    noop_types: &[&str]
+) -> VersionBumpType {
+    // Breaking changes always trigger a major bump
+    if commit.has_breaking_change {
+        return VersionBumpType::Major;
+    }
+    
+    // Check commit type against configurable lists
+    if major_types.contains(&commit.commit_type.as_str()) {
+        VersionBumpType::Major
+    } else if minor_types.contains(&commit.commit_type.as_str()) {
+        VersionBumpType::Minor
+    } else if noop_types.contains(&commit.commit_type.as_str()) {
+        VersionBumpType::NoOp
+    } else {
+        // Default to patch for any other commit type
+        VersionBumpType::Patch
+    }
+}
+
 /// Parse a version string into a semver Version
 pub fn parse_version(tag: &str) -> Result<Version, semver::Error> {
     let cleaned_tag = tag.trim_start_matches('v');
@@ -40,6 +74,9 @@ pub fn calculate_version_bump(
     _from: &Commit,
     to: &Commit,
     parser: &dyn crate::models::commit::CommitParser,
+    major_types: &[&str],
+    minor_types: &[&str],
+    noop_types: &[&str],
 ) -> Result<(VersionBump, ChangesetSummary), VNextError> {
     log::debug!("Calculating version bump using parser: {}", parser.name());
     
@@ -65,22 +102,27 @@ pub fn calculate_version_bump(
         // This avoids parsing the same message multiple times
         let commit = parser.parse_commit(oid.to_string(), message);
         
-        // Use the Commit object's methods to determine the type of change
-        if commit.is_major_change() {
-            bump.major = true;
-            summary.major += 1;
-            log::debug!("Detected major change in commit: {}", commit.commit_id);
-        } else if commit.is_minor_change() {
-            bump.minor = true;
-            summary.minor += 1;
-            log::debug!("Detected minor change in commit: {}", commit.commit_id);
-        } else if !commit.is_noop_change() {
-            bump.patch = true;
-            summary.patch += 1;
-            log::debug!("Detected patch change in commit: {}", commit.commit_id);
-        } else {
-            summary.noop += 1;
-            log::debug!("Detected no-op change in commit: {}", commit.commit_id);
+        // Determine the version bump using the new function
+        match determine_version_bump(&commit, major_types, minor_types, noop_types) {
+            VersionBumpType::Major => {
+                bump.major = true;
+                summary.major += 1;
+                log::debug!("Detected major change in commit: {}", commit.commit_id);
+            },
+            VersionBumpType::Minor => {
+                bump.minor = true;
+                summary.minor += 1;
+                log::debug!("Detected minor change in commit: {}", commit.commit_id);
+            },
+            VersionBumpType::Patch => {
+                bump.patch = true;
+                summary.patch += 1;
+                log::debug!("Detected patch change in commit: {}", commit.commit_id);
+            },
+            VersionBumpType::NoOp => {
+                summary.noop += 1;
+                log::debug!("Detected no-op change in commit: {}", commit.commit_id);
+            }
         }
         
         // Add the commit to the summary
@@ -148,16 +190,19 @@ pub fn find_version_base<'repo, 'head>(repo: &'repo Repository, head: &'head Com
 pub fn calculate_version(
     repo: &Repository,
     head: &Commit,
-    start_version: &Version,
+    current_version: &Version,
     base_commit: &Commit,
     parser: &dyn crate::models::commit::CommitParser,
+    major_types: &[&str],
+    minor_types: &[&str],
+    noop_types: &[&str],
 ) -> Result<(Version, ChangesetSummary), VNextError> {
     // Calculate version bump
     let (bump, summary) = calculate_version_bump(
-        repo, base_commit, head, parser)?;
+        repo, base_commit, head, parser, major_types, minor_types, noop_types)?;
     
     // Calculate next version
-    let next_version = calculate_next_version(&start_version, &bump);
+    let next_version = calculate_next_version(&current_version, &bump);
     
     log::debug!(
         "Version bump: major={}, minor={}, patch={}",

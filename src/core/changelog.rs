@@ -45,8 +45,8 @@ pub fn format_changelog(
             
             // Add the commit body if present
             if let Some(body) = &commit.body {
-                // If this is a breaking change body, add the prefix back
-                let body_with_prefix = if commit.breaking_change_body {
+                // If this is a breaking change, add the prefix
+                let body_with_prefix = if commit.has_breaking_change && !body.starts_with("BREAKING CHANGE:") {
                     format!("BREAKING CHANGE: {}", body)
                 } else {
                     body.clone()

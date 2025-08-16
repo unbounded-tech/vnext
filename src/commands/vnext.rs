@@ -15,10 +15,23 @@ pub fn run_vnext_command(
     breaking_pattern: &str,
     type_pattern: &str,
     scope_pattern: &str,
+    major_commit_types: &str,
+    minor_commit_types: &str,
+    noop_commit_types: &str,
     show_changelog: bool,
     no_header_scaling: bool,
     current: bool,
 ) -> Result<(), VNextError> {
+    // Parse comma-separated commit types
+    let major_types: Vec<&str> = major_commit_types.split(',').map(|s| s.trim()).collect();
+    let minor_types: Vec<&str> = minor_commit_types.split(',').map(|s| s.trim()).collect();
+    let noop_types: Vec<&str> = noop_commit_types.split(',').map(|s| s.trim()).collect();
+    
+    log::debug!("Using commit types:");
+    log::debug!("  Major types: {:?}", major_types);
+    log::debug!("  Minor types: {:?}", minor_types);
+    log::debug!("  No-op types: {:?}", noop_types);
+    
     // Create the appropriate parser based on the strategy
     log::debug!("Using parser strategy: {}", parser_name);
     
@@ -77,7 +90,8 @@ pub fn run_vnext_command(
 
     // Calculate version
     let (next_version, mut summary) = match version::calculate_version(
-        &repo, &head, &current_version, &base_commit, &*parser
+        &repo, &head, &current_version, &base_commit, &*parser,
+        &major_types, &minor_types, &noop_types
     ) {
         Ok(result) => result,
         Err(e) => {

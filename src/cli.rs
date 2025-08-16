@@ -37,6 +37,18 @@ pub struct Cli {
     #[clap(long, default_value = SCOPE_REGEX_STR)]
     pub scope_pattern: String,
 
+    /// Comma-separated list of commit types that trigger a major version bump
+    #[clap(long, default_value = "major")]
+    pub major_commit_types: String,
+
+    /// Comma-separated list of commit types that trigger a minor version bump
+    #[clap(long, default_value = "feat,minor")]
+    pub minor_commit_types: String,
+
+    /// Comma-separated list of commit types that should not trigger a version bump
+    #[clap(long, default_value = "chore,noop")]
+    pub noop_commit_types: String,
+
     /// Output the changelog with the next version
     #[clap(long)]
     pub changelog: bool,
@@ -102,6 +114,9 @@ pub fn run(cli: Cli) -> Result<(), VNextError> {
         &cli.breaking,
         &cli.type_pattern,
         &cli.scope_pattern,
+        &cli.major_commit_types,
+        &cli.minor_commit_types,
+        &cli.noop_commit_types,
         cli.changelog,
         cli.no_header_scaling,
         cli.current,
