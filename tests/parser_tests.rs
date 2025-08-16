@@ -17,11 +17,10 @@ use vnext::parsers::{
     CustomRegexParser,
     ParserFactory,
     ParserStrategy,
-    MAJOR_REGEX_STR,
-    MINOR_REGEX_STR,
-    NOOP_REGEX_STR,
+    COMMIT_TYPE_REGEX_STR,
+    TITLE_REGEX_STR,
+    BODY_REGEX_STR,
     BREAKING_REGEX_STR,
-    TYPE_REGEX_STR,
     SCOPE_REGEX_STR,
 };
 
@@ -123,11 +122,10 @@ fn test_custom_regex_parser() {
     
     // Test with custom patterns
     let custom_parser = CustomRegexParser::new(
-        r"(?m)^custom-major:.*",
-        r"(?m)^custom-minor:.*",
-        r"(?m)^custom-noop:.*",
-        r"(?m)^custom-breaking:.*",
         r"^custom-([\w-]+):",  // Extract "major", "minor", etc. from "custom-major", "custom-minor"
+        r"^custom-[\w-]+(?:\([^\)]+\))?!?:\s*(.*)",  // Extract title
+        r"(?s)^[^\n]*\n\n(.*)",  // Extract body
+        r"(?m)^custom-breaking:.*|^custom-[\w-]+(?:.*)?!:.*",  // Breaking change pattern (including ! syntax)
         r"^custom-[\w-]+\((.*)\):",  // Custom scope pattern (likely won't match in these tests)
     ).unwrap();
     
@@ -141,7 +139,8 @@ fn test_custom_regex_parser() {
     let not_custom_noop = custom_parser.parse_commit("test17".to_string(), "noop: This is a no-op change".to_string());
     
     let custom_breaking = custom_parser.parse_commit("test18".to_string(), "custom-breaking: This is a breaking change".to_string());
-    let not_custom_breaking = custom_parser.parse_commit("test19".to_string(), "BREAKING CHANGE: This is a breaking change".to_string());
+    let custom_breaking_bang = custom_parser.parse_commit("test19".to_string(), "custom-feat!: This is a breaking change".to_string());
+    let not_custom_breaking = custom_parser.parse_commit("test20".to_string(), "BREAKING CHANGE: This is a breaking change".to_string());
     
     assert!(custom_major.is_major_change(&default_major_types()));
     assert!(!not_custom_major.is_major_change(&default_major_types()));
@@ -153,6 +152,7 @@ fn test_custom_regex_parser() {
     assert!(!not_custom_noop.is_noop_change(&default_noop_types()));
     
     assert!(custom_breaking.has_breaking_change);
+    assert!(custom_breaking_bang.has_breaking_change);
     assert!(!not_custom_breaking.has_breaking_change);
 }
 
@@ -164,22 +164,20 @@ fn test_parser_factory() {
     
     // Test creating a custom regex parser
     let custom_parser = ParserFactory::create(&ParserStrategy::CustomRegex {
-        major_pattern: MAJOR_REGEX_STR.to_string(),
-        minor_pattern: MINOR_REGEX_STR.to_string(),
-        noop_pattern: NOOP_REGEX_STR.to_string(),
+        commit_type_pattern: COMMIT_TYPE_REGEX_STR.to_string(),
+        title_pattern: TITLE_REGEX_STR.to_string(),
+        body_pattern: BODY_REGEX_STR.to_string(),
         breaking_pattern: BREAKING_REGEX_STR.to_string(),
-        type_pattern: TYPE_REGEX_STR.to_string(),
         scope_pattern: SCOPE_REGEX_STR.to_string(),
     });
     assert_eq!(custom_parser.name(), "custom-regex");
     
     // Test with invalid regex patterns (should fall back to defaults)
     let invalid_parser = ParserFactory::create(&ParserStrategy::CustomRegex {
-        major_pattern: "[invalid regex".to_string(),
-        minor_pattern: MINOR_REGEX_STR.to_string(),
-        noop_pattern: NOOP_REGEX_STR.to_string(),
+        commit_type_pattern: "[invalid regex".to_string(),
+        title_pattern: TITLE_REGEX_STR.to_string(),
+        body_pattern: BODY_REGEX_STR.to_string(),
         breaking_pattern: BREAKING_REGEX_STR.to_string(),
-        type_pattern: TYPE_REGEX_STR.to_string(),
         scope_pattern: SCOPE_REGEX_STR.to_string(),
     });
     assert_eq!(invalid_parser.name(), "custom-regex");
@@ -201,11 +199,10 @@ fn test_integration_with_version_calculation() {
     
     let conventional_parser = ParserFactory::create(&ParserStrategy::Conventional);
     let custom_parser = ParserFactory::create(&ParserStrategy::CustomRegex {
-        major_pattern: MAJOR_REGEX_STR.to_string(),
-        minor_pattern: MINOR_REGEX_STR.to_string(),
-        noop_pattern: NOOP_REGEX_STR.to_string(),
+        commit_type_pattern: COMMIT_TYPE_REGEX_STR.to_string(),
+        title_pattern: TITLE_REGEX_STR.to_string(),
+        body_pattern: BODY_REGEX_STR.to_string(),
         breaking_pattern: BREAKING_REGEX_STR.to_string(),
-        type_pattern: TYPE_REGEX_STR.to_string(),
         scope_pattern: SCOPE_REGEX_STR.to_string(),
     });
     
@@ -215,7 +212,7 @@ fn test_integration_with_version_calculation() {
     let custom_major = custom_parser.parse_commit("test23".to_string(), major_message.to_string());
     
     assert!(conv_major.is_major_change(&default_major_types()));
-    assert!(!custom_major.is_major_change(&default_major_types())); // Custom parser doesn't recognize ! as breaking
+    assert!(custom_major.is_major_change(&default_major_types())); // Custom parser now recognizes ! as breaking
     
     // Test with a minor change
     let minor_message = "feat: Add new feature";
