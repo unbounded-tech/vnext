@@ -418,8 +418,7 @@ pub fn generate_deploy_key(
             .header("User-Agent", "vnext-cli")
             .json(&serde_json::json!({
                 "title": key_name,
-                "key": public_key_content.trim(),
-                "read_only": true
+                "key": public_key_content.trim()
             }))
             .send()
             .map_err(|e| VNextError::Other(format!("Failed to send request to GitHub API: {}", e)))?;
