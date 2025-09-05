@@ -2,6 +2,13 @@
 
 **vnext** is a fast Rust CLI tool that analyzes your project's Git commit history using conventional commit conventions to automatically compute your next semantic version. It streamlines release management by deciding whether to bump the major, minor, or patch version solely from commit messages, making it ideal for any project regardless of language or ecosystem.
 
+Usage:
+```
+NEXT_VERSION=v`vnext`
+CURRENT_VERSION=v`vnext --current`
+vnext --changelog > CHANGELOG.md
+```
+
 ## Motivation
 
 Version management has traditionally been a manual, subjective process prone to inconsistency and human bias. Emotionless versioning—where version numbers are determined by objective rules rather than human judgment—eliminates these issues by creating a standardized, predictable release process. This approach removes debates about what constitutes a "major" or "minor" change, prevents version stagnation due to fear of incrementing major versions, and ensures version numbers accurately reflect the nature of changes.
