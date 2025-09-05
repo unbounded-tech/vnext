@@ -10,6 +10,8 @@ Beyond just determining version numbers, conventional commits serve a dual purpo
 
 Semantic-release is a powerful tool for automated versioning and changelog generation in the Node.js ecosystem, but it's tightly bound to Node and depends on the presence of a package.json, often introducing unnecessary overhead. While alternative tools exist, few offer the same streamlined experience. To address this gap, vnext was created—a lightweight, language-agnostic utility designed to parse Git commit messages and output the next semantic version. It adheres to the Unix philosophy of "do one thing well," making it an ideal choice for CI/CD pipelines across any tech stack.
 
+https://patrickleet.medium.com/releasing-new-versions-should-be-boring-really-boring-55e29e4d9765
+
 ## Features
 
 - **Automated Version Calculation:**
