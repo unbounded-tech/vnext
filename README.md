@@ -173,22 +173,12 @@ You can also use custom regex patterns to parse commit messages. This is useful 
 
 To use custom regex patterns, use the `--parser custom` flag along with the following options:
 
-```bash
-vnext --parser custom \
-      --major "(?m)^major(\(.+\))?:.*" \
-      --minor "(?m)^(minor|feat)(\(.+\))?:.*" \
-      --noop "(?m)^(noop|chore)(\(.+\))?:.*" \
-      --breaking "(?s)^[^\n]*\n\nBREAKING CHANGE:.*"
-```
-
-The regex patterns are used as follows:
-
 - `--major`: Matches commits that trigger a major version bump
 - `--minor`: Matches commits that trigger a minor version bump
 - `--noop`: Matches commits that should not trigger a version bump
 - `--breaking`: Matches commits that indicate a breaking change
-- `--type_pattern`: Regex for extracting commit type from message
-- `--scope_pattern`: Regex for extracting commit scope from message
+- `--type_pattern`: Extracts the commit type (e.g., "feat", "fix", "chore") from the message
+- `--scope_pattern`: Extracts the scope (e.g., "auth", "ui") from the message if present in parentheses
 
 If a commit matches the `--breaking` pattern or the `--major` pattern, it triggers a major version bump. If it matches the `--minor` pattern, it triggers a minor version bump. If it doesn't match any of these patterns and doesn't match the `--noop` pattern, it triggers a patch version bump.
 
@@ -203,11 +193,6 @@ vnext --parser custom \
       --type_pattern "^([\w-]+)((.*))?:" \
       --scope_pattern "^[\w-]+\((.*)\)!?:"
 ```
-
-- `--type_pattern`: Extracts the commit type (e.g., "feat", "fix", "chore") from the message
-- `--scope_pattern`: Extracts the scope (e.g., "auth", "ui") from the message if present in parentheses
-
-These patterns help vnext parse structured information from commit messages, which is particularly useful when generating changelogs.
 
 ### Generating a Changelog
 
