@@ -102,6 +102,10 @@ sequenceDiagram
 1. **Install ubi:**  
    Ensure you have ubi installed by running:
    ```bash
+   curl --silent --location \
+    https://raw.githubusercontent.com/houseabsolute/ubi/master/bootstrap/bootstrap-ubi.sh |
+    sh
+
    mkdir -p ~/.ubi/bin
    echo 'export PATH="$HOME/.ubi/bin:$PATH"' >> ~/.zshrc  # or your preferred shell profile
    ```
