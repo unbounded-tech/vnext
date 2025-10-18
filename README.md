@@ -407,7 +407,10 @@ vnext generate-deploy-key [--owner OWNER] [--name NAME]
 
 If the deploy key doesn't exist, a new release won't be triggered by the tag created. If you are here because of this, delete the tag, and re-run the pipeline after setting up the deploy key.
 
-NOTE: If you get the error `Deploy keys are disabled for this repository` that probably means you skipped the `gh auth refresh` step, or that token you had expired, and needs to be refreshed again, via the same command.
+NOTE: If you get the error `Deploy keys are disabled for this repository`, it's an organization level setting:
+
+<img width="967" height="365" alt="image" src="https://github.com/user-attachments/assets/467c22f8-1f3e-4ca1-9569-0938225e7931" />
+
 
 #### Add shared workflow
 
