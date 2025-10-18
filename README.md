@@ -407,6 +407,8 @@ vnext generate-deploy-key [--owner OWNER] [--name NAME]
 
 If the deploy key doesn't exist, a new release won't be triggered by the tag created. If you are here because of this, delete the tag, and re-run the pipeline after setting up the deploy key.
 
+NOTE: If you get the error `Deploy keys are disabled for this repository` that probably means you skipped the `gh auth refresh` step, or that token you had expired, and needs to be refreshed again, via the same command.
+
 #### Add shared workflow
 
 A shared github workflow can be found at [https://github.com/unbounded-tech/workflow-vnext-tag](unbounded-tech/workflow-vnext-tag).
