@@ -143,6 +143,24 @@ fn check_deploy_key_exists(
     }
 }
 
+/// Clean up temporary key files
+fn cleanup_temp_keys() {
+    let tmp_dir_path = Path::new(".tmp");
+    let private_key_path = tmp_dir_path.join("deploy_key");
+    let public_key_path = tmp_dir_path.join("deploy_key.pub");
+
+    if private_key_path.exists() {
+        if let Err(e) = fs::remove_file(&private_key_path) {
+            log::warn!("Failed to clean up private key file: {}", e);
+        }
+    }
+    if public_key_path.exists() {
+        if let Err(e) = fs::remove_file(&public_key_path) {
+            log::warn!("Failed to clean up public key file: {}", e);
+        }
+    }
+}
+
 /// Check if a secret with the given name already exists in the repository
 fn check_secret_exists(
     owner: &str,
@@ -194,6 +212,19 @@ fn check_secret_exists(
 
 /// Generate a deploy key for a GitHub repository
 pub fn generate_deploy_key(
+    owner: Option<String>,
+    name: Option<String>,
+    key_name: Option<String>,
+    overwrite: bool,
+) -> Result<(), VNextError> {
+    // Always clean up temp keys on exit, regardless of success or failure
+    let result = generate_deploy_key_inner(owner, name, key_name, overwrite);
+    cleanup_temp_keys();
+    result
+}
+
+/// Inner implementation of deploy key generation
+fn generate_deploy_key_inner(
     owner: Option<String>,
     name: Option<String>,
     key_name: Option<String>,
@@ -291,6 +322,9 @@ pub fn generate_deploy_key(
 
     // Generate SSH key pair if it doesn't exist or we're overwriting
     if !private_key_path.exists() || should_overwrite {
+        // Remove existing key files if they exist (ssh-keygen won't overwrite)
+        cleanup_temp_keys();
+
         // Generate SSH key pair using ssh-keygen
         info!("Generating SSH key pair...");
         let keygen_output = Command::new("ssh-keygen")
@@ -396,14 +430,6 @@ pub fn generate_deploy_key(
                 }
                 
                 info!("Deploy key setup completed.");
-                
-                // Clean up
-                fs::remove_file(&private_key_path)
-                    .map_err(|e| VNextError::Other(format!("Failed to remove private key: {}", e)))?;
-                
-                fs::remove_file(&public_key_path)
-                    .map_err(|e| VNextError::Other(format!("Failed to remove public key: {}", e)))?;
-                
                 return Ok(());
             }
         };
@@ -436,13 +462,6 @@ pub fn generate_deploy_key(
     } else {
         info!("Deploy key '{}' already exists. Skipping creation.", key_name);
     }
-    
-    // Clean up
-    fs::remove_file(&private_key_path)
-        .map_err(|e| VNextError::Other(format!("Failed to remove private key: {}", e)))?;
-    
-    fs::remove_file(&public_key_path)
-        .map_err(|e| VNextError::Other(format!("Failed to remove public key: {}", e)))?;
-    
+
     Ok(())
 }
