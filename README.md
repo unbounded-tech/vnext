@@ -4,6 +4,9 @@
 
 Usage:
 ```
+# install with ubi (more details below)
+ubi --project unbounded-tech/vnext --in ~/.ubi/bin
+
 NEXT_VERSION=v`vnext`
 CURRENT_VERSION=v`vnext --current`
 vnext --changelog > CHANGELOG.md
