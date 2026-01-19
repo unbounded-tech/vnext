@@ -20,7 +20,7 @@ jobs:
   version-and-tag:
     name: Version and Tag
     needs: quality
-    uses: unbounded-tech/workflow-vnext-tag/.github/workflows/workflow.yaml@v1.20.2
+    uses: unbounded-tech/workflow-vnext-tag/.github/workflows/workflow.yaml@v1.21.0
     secrets: inherit
     with:
       useDeployKey: true
